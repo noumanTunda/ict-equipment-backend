@@ -37,4 +37,11 @@ public class AuthController {
         ApiResponse<UserProfileDto> response = authService.getCurrentUser();
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserProfileDto>> register(@Valid @RequestBody RegisterRequestDto registerRequest) {
+        log.info("Registration attempt for employee ID: {}", registerRequest.getEmployeeId());
+        ApiResponse<UserProfileDto> response = authService.register(registerRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 }
