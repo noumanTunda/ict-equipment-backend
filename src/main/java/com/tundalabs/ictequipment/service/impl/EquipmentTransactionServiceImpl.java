@@ -1,0 +1,472 @@
+package com.tundalabs.ictequipment.service.impl;
+
+import com.lowagie.text.*;
+import com.lowagie.text.pdf.PdfWriter;
+import com.tundalabs.ictequipment.dto.*;
+import com.tundalabs.ictequipment.entity.*;
+import com.tundalabs.ictequipment.exception.EquipmentUnavailableException;
+import com.tundalabs.ictequipment.exception.InvalidTransactionStateException;
+import com.tundalabs.ictequipment.repository.*;
+import com.tundalabs.ictequipment.service.EquipmentTransactionService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class EquipmentTransactionServiceImpl implements EquipmentTransactionService {
+
+    private final EquipmentTransactionRepository transactionRepository;
+    private final EquipmentRepository equipmentRepository;
+    private final TransactionIssuedItemRepository issuedItemRepository;
+    private final TransactionReturnedItemRepository returnedItemRepository;
+    private final IctChecklistRepository checklistRepository;
+    private final UserRepository userRepository;
+
+    @Override
+    @Transactional
+    public TransactionResponseDto createTransaction(CreateTransactionRequestDto request) {
+        log.info("Creating transaction for staff ID: {}", request.getStaffId());
+
+        // Validate staff and issuing officer exist
+        User staff = userRepository.findByEmployeeId(request.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found with ID: " + request.getStaffId()));
+
+        User officer = userRepository.findByEmployeeId(request.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found with ID: " + request.getIssuingOfficerId()));
+
+        // Generate unique transaction code
+        String transactionCode = generateTransactionCode();
+
+        // Create transaction
+        EquipmentTransaction transaction = EquipmentTransaction.builder()
+                .transactionCode(transactionCode)
+                .staffId(request.getStaffId())
+                .issuingOfficerId(request.getIssuingOfficerId())
+                .status(EquipmentTransaction.TransactionStatus.PENDING_SIGNATURE)
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        // Process issued items (Part B)
+        List<TransactionIssuedItem> issuedItems = processIssuedItems(request.getIssuedItems(), transaction);
+        transaction.setIssuedItems(issuedItems);
+
+        // Process returned items (Part C) if provided
+        if (request.getReturnedItems() != null && !request.getReturnedItems().isEmpty()) {
+            List<TransactionReturnedItem> returnedItems = processReturnedItems(request.getReturnedItems(), transaction);
+            transaction.setReturnedItems(returnedItems);
+        }
+
+        // Process checklist (Part E) if provided
+        if (request.getChecklist() != null) {
+            IctChecklist checklist = processChecklist(request.getChecklist(), transaction);
+            transaction.setChecklist(checklist);
+        }
+
+        transaction = transactionRepository.save(transaction);
+        log.info("Transaction created successfully with code: {}", transactionCode);
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
+    public TransactionResponseDto getTransactionById(Long id) {
+        EquipmentTransaction transaction = transactionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+
+        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found"));
+        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
+    public TransactionResponseDto getTransactionByCode(String transactionCode) {
+        EquipmentTransaction transaction = transactionRepository.findByTransactionCode(transactionCode)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with code: " + transactionCode));
+
+        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found"));
+        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
+    public Page<TransactionResponseDto> getTransactions(TransactionFilterParams filters, Pageable pageable) {
+        Page<EquipmentTransaction> transactions = transactionRepository.findByFilters(
+                filters.getStaffId(),
+                filters.getStatus(),
+                filters.getStartDate(),
+                filters.getEndDate(),
+                pageable
+        );
+
+        return transactions.map(transaction -> {
+            User staff = userRepository.findByEmployeeId(transaction.getStaffId()).orElse(null);
+            User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId()).orElse(null);
+            return mapToResponseDto(transaction,
+                    staff != null ? staff.getFullName() : null,
+                    officer != null ? officer.getFullName() : null);
+        });
+    }
+
+    @Override
+    @Transactional
+    public TransactionResponseDto submitSignatures(Long transactionId, SubmitSignatureRequestDto request) {
+        log.info("Submitting signatures for transaction ID: {}", transactionId);
+
+        EquipmentTransaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
+
+        // Validate transaction is in PENDING_SIGNATURE status
+        if (transaction.getStatus() != EquipmentTransaction.TransactionStatus.PENDING_SIGNATURE) {
+            throw new InvalidTransactionStateException(
+                    "Transaction must be in PENDING_SIGNATURE status to submit signatures. Current status: " + transaction.getStatus()
+            );
+        }
+
+        // Validate signatures are present
+        if (request.getEmployeeSignature() == null || request.getEmployeeSignature().isEmpty()) {
+            throw new RuntimeException("Employee signature is required");
+        }
+        if (request.getOfficerSignature() == null || request.getOfficerSignature().isEmpty()) {
+            throw new RuntimeException("Officer signature is required");
+        }
+
+        // Save signatures and timestamps
+        transaction.setEmployeeSignature(request.getEmployeeSignature());
+        transaction.setOfficerSignature(request.getOfficerSignature());
+        transaction.setEmployeeSignedAt(LocalDateTime.now());
+        transaction.setOfficerSignedAt(LocalDateTime.now());
+        transaction.setStatus(EquipmentTransaction.TransactionStatus.COMPLETED);
+
+        transaction = transactionRepository.save(transaction);
+        log.info("Transaction completed successfully with ID: {}", transactionId);
+
+        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found"));
+        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
+    @Transactional
+    public TransactionResponseDto cancelTransaction(Long transactionId) {
+        log.info("Cancelling transaction ID: {}", transactionId);
+
+        EquipmentTransaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
+
+        // Validate transaction is in PENDING_SIGNATURE status
+        if (transaction.getStatus() != EquipmentTransaction.TransactionStatus.PENDING_SIGNATURE) {
+            throw new InvalidTransactionStateException(
+                    "Only PENDING_SIGNATURE transactions can be cancelled. Current status: " + transaction.getStatus()
+            );
+        }
+
+        // Rollback equipment statuses
+        rollbackEquipmentStatuses(transaction);
+
+        // Update transaction status
+        transaction.setStatus(EquipmentTransaction.TransactionStatus.CANCELLED);
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Transaction cancelled successfully with ID: {}", transactionId);
+
+        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found"));
+        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
+    public byte[] generateTransactionPdf(Long transactionId) {
+        EquipmentTransaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
+
+        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found"));
+        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            Document document = new Document(PageSize.A4);
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
+            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+            Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+
+            document.add(new Paragraph("PPRA ICT EQUIPMENT ISSUE AND RETURN FORM", titleFont));
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART A - TRANSACTION DETAILS", headerFont));
+            document.add(new Paragraph("Transaction Code: " + transaction.getTransactionCode(), normalFont));
+            document.add(new Paragraph("Date: " + transaction.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), normalFont));
+            document.add(new Paragraph("Status: " + transaction.getStatus(), normalFont));
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART B - STAFF INFORMATION", headerFont));
+            document.add(new Paragraph("Staff ID: " + transaction.getStaffId(), normalFont));
+            document.add(new Paragraph("Staff Name: " + staff.getFullName(), normalFont));
+            document.add(new Paragraph("Department: " + staff.getDepartment(), normalFont));
+            document.add(new Paragraph("Email: " + staff.getEmail(), normalFont));
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART C - ISSUING OFFICER INFORMATION", headerFont));
+            document.add(new Paragraph("Officer ID: " + transaction.getIssuingOfficerId(), normalFont));
+            document.add(new Paragraph("Officer Name: " + officer.getFullName(), normalFont));
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART D - ISSUED ITEMS", headerFont));
+            if (transaction.getIssuedItems() != null && !transaction.getIssuedItems().isEmpty()) {
+                Table issuedTable = new Table(3);
+                issuedTable.setWidths(new float[]{3f, 3f, 4f});
+                issuedTable.addCell(new Cell(new Phrase("Asset Number", headerFont)));
+                issuedTable.addCell(new Cell(new Phrase("Serial Number", headerFont)));
+                issuedTable.addCell(new Cell(new Phrase("Accessories", headerFont)));
+
+                for (TransactionIssuedItem item : transaction.getIssuedItems()) {
+                    issuedTable.addCell(new Cell(new Phrase(item.getEquipment().getAssetNumber(), normalFont)));
+                    issuedTable.addCell(new Cell(new Phrase(item.getEquipment().getSerialNumber(), normalFont)));
+                    issuedTable.addCell(new Cell(new Phrase(item.getAccessoriesProvided() != null ? item.getAccessoriesProvided() : "N/A", normalFont)));
+                }
+                document.add(issuedTable);
+            } else {
+                document.add(new Paragraph("No issued items", normalFont));
+            }
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART E - RETURNED ITEMS", headerFont));
+            if (transaction.getReturnedItems() != null && !transaction.getReturnedItems().isEmpty()) {
+                Table returnedTable = new Table(3);
+                returnedTable.setWidths(new float[]{3f, 3f, 4f});
+                returnedTable.addCell(new Cell(new Phrase("Asset Number", headerFont)));
+                returnedTable.addCell(new Cell(new Phrase("Condition", headerFont)));
+                returnedTable.addCell(new Cell(new Phrase("Remarks", headerFont)));
+
+                for (TransactionReturnedItem item : transaction.getReturnedItems()) {
+                    returnedTable.addCell(new Cell(new Phrase(item.getEquipment().getAssetNumber(), normalFont)));
+                    returnedTable.addCell(new Cell(new Phrase(item.getItemCondition(), normalFont)));
+                    returnedTable.addCell(new Cell(new Phrase(item.getRemarks() != null ? item.getRemarks() : "N/A", normalFont)));
+                }
+                document.add(returnedTable);
+            } else {
+                document.add(new Paragraph("No returned items", normalFont));
+            }
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART F - ICT CHECKLIST", headerFont));
+            if (transaction.getChecklist() != null) {
+                IctChecklist checklist = transaction.getChecklist();
+                document.add(new Paragraph("OS Installed: " + (checklist.getOsInstalled() != null ? checklist.getOsInstalled() : "N/A"), normalFont));
+                document.add(new Paragraph("App/System Installed: " + (checklist.getAppSystemInstalled() != null ? checklist.getAppSystemInstalled() : "N/A"), normalFont));
+                document.add(new Paragraph("Anti-virus Installed: " + (checklist.getAntiVirusInstalled() != null ? checklist.getAntiVirusInstalled() : "N/A"), normalFont));
+                document.add(new Paragraph("PDF Reader Installed: " + (checklist.getPdfReaderInstalled() != null ? checklist.getPdfReaderInstalled() : "N/A"), normalFont));
+                document.add(new Paragraph("Joined to Domain: " + (checklist.getIsJoinedToDomain() != null ? checklist.getIsJoinedToDomain() : "N/A"), normalFont));
+                document.add(new Paragraph("VPN Installed: " + (checklist.getIsInstalledVpn() != null ? checklist.getIsInstalledVpn() : "N/A"), normalFont));
+                document.add(new Paragraph("Printer Installed: " + (checklist.getIsInstalledPrinter() != null ? checklist.getIsInstalledPrinter() : "N/A"), normalFont));
+                document.add(new Paragraph("Additional Notes: " + (checklist.getAdditionalNotes() != null ? checklist.getAdditionalNotes() : "N/A"), normalFont));
+            } else {
+                document.add(new Paragraph("No checklist provided", normalFont));
+            }
+            document.add(Chunk.NEWLINE);
+
+            document.add(new Paragraph("PART G - SIGNATURES", headerFont));
+            document.add(new Paragraph("Employee Signed At: " + (transaction.getEmployeeSignedAt() != null ? transaction.getEmployeeSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "Not signed"), normalFont));
+            document.add(new Paragraph("Officer Signed At: " + (transaction.getOfficerSignedAt() != null ? transaction.getOfficerSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "Not signed"), normalFont));
+
+            document.close();
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            log.error("Error generating PDF for transaction ID: {}", transactionId, e);
+            throw new RuntimeException("Failed to generate PDF: " + e.getMessage(), e);
+        }
+    }
+
+    private List<TransactionIssuedItem> processIssuedItems(List<IssuedItemRequestDto> issuedItemDtos, EquipmentTransaction transaction) {
+        return issuedItemDtos.stream().map(itemDto -> {
+            Equipment equipment = equipmentRepository.findByAssetNumber(itemDto.getAssetNumber())
+                    .orElseThrow(() -> new RuntimeException("Equipment not found with asset number: " + itemDto.getAssetNumber()));
+
+            // Validate equipment is available
+            if (equipment.getStatus() != Equipment.EquipmentStatus.AVAILABLE) {
+                throw new EquipmentUnavailableException(
+                        "Equipment " + itemDto.getAssetNumber() + " is not available. Current status: " + equipment.getStatus()
+                );
+            }
+
+            // Update equipment status to ISSUED
+            equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
+            equipmentRepository.save(equipment);
+
+            TransactionIssuedItem issuedItem = TransactionIssuedItem.builder()
+                    .transaction(transaction)
+                    .equipment(equipment)
+                    .accessoriesProvided(itemDto.getAccessoriesProvided())
+                    .build();
+
+            return issuedItemRepository.save(issuedItem);
+        }).collect(Collectors.toList());
+    }
+
+    private List<TransactionReturnedItem> processReturnedItems(List<ReturnedItemRequestDto> returnedItemDtos, EquipmentTransaction transaction) {
+        return returnedItemDtos.stream().map(itemDto -> {
+            Equipment equipment = equipmentRepository.findByAssetNumber(itemDto.getAssetNumber())
+                    .orElseThrow(() -> new RuntimeException("Equipment not found with asset number: " + itemDto.getAssetNumber()));
+
+            // Validate equipment is issued
+            if (equipment.getStatus() != Equipment.EquipmentStatus.ISSUED) {
+                throw new EquipmentUnavailableException(
+                        "Equipment " + itemDto.getAssetNumber() + " is not in ISSUED status. Current status: " + equipment.getStatus()
+                );
+            }
+
+            // Update equipment status to RETURNED
+            equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
+            equipmentRepository.save(equipment);
+
+            TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
+                    .transaction(transaction)
+                    .equipment(equipment)
+                    .itemCondition(itemDto.getItemCondition())
+                    .remarks(itemDto.getRemarks())
+                    .build();
+
+            return returnedItemRepository.save(returnedItem);
+        }).collect(Collectors.toList());
+    }
+
+    private IctChecklist processChecklist(IctChecklistRequestDto checklistDto, EquipmentTransaction transaction) {
+        IctChecklist checklist = IctChecklist.builder()
+                .transaction(transaction)
+                .osInstalled(checklistDto.getOsInstalled())
+                .appSystemInstalled(checklistDto.getAppSystemInstalled())
+                .antiVirusInstalled(checklistDto.getAntiVirusInstalled())
+                .pdfReaderInstalled(checklistDto.getPdfReaderInstalled())
+                .isJoinedToDomain(checklistDto.getIsJoinedToDomain())
+                .isInstalledVpn(checklistDto.getIsInstalledVpn())
+                .isInstalledPrinter(checklistDto.getIsInstalledPrinter())
+                .additionalNotes(checklistDto.getAdditionalNotes())
+                .build();
+
+        return checklistRepository.save(checklist);
+    }
+
+    private void rollbackEquipmentStatuses(EquipmentTransaction transaction) {
+        // Rollback issued items: ISSUED -> AVAILABLE
+        if (transaction.getIssuedItems() != null) {
+            transaction.getIssuedItems().forEach(issuedItem -> {
+                Equipment equipment = issuedItem.getEquipment();
+                if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
+                    equipment.setStatus(Equipment.EquipmentStatus.AVAILABLE);
+                    equipmentRepository.save(equipment);
+                    log.info("Rolled back equipment {} from ISSUED to AVAILABLE", equipment.getAssetNumber());
+                }
+            });
+        }
+
+        // Rollback returned items: RETURNED -> ISSUED
+        if (transaction.getReturnedItems() != null) {
+            transaction.getReturnedItems().forEach(returnedItem -> {
+                Equipment equipment = returnedItem.getEquipment();
+                if (equipment.getStatus() == Equipment.EquipmentStatus.RETURNED) {
+                    equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
+                    equipmentRepository.save(equipment);
+                    log.info("Rolled back equipment {} from RETURNED to ISSUED", equipment.getAssetNumber());
+                }
+            });
+        }
+    }
+
+    private String generateTransactionCode() {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String uuid = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "TXN-" + timestamp + "-" + uuid;
+    }
+
+    private TransactionResponseDto mapToResponseDto(EquipmentTransaction transaction, String staffName, String officerName) {
+        List<IssuedItemResponseDto> issuedItemDtos = null;
+        if (transaction.getIssuedItems() != null) {
+            issuedItemDtos = transaction.getIssuedItems().stream()
+                    .map(item -> IssuedItemResponseDto.builder()
+                            .id(item.getId())
+                            .assetNumber(item.getEquipment().getAssetNumber())
+                            .serialNumber(item.getEquipment().getSerialNumber())
+                            .equipmentType(item.getEquipment().getEquipmentType())
+                            .accessoriesProvided(item.getAccessoriesProvided())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        List<ReturnedItemResponseDto> returnedItemDtos = null;
+        if (transaction.getReturnedItems() != null) {
+            returnedItemDtos = transaction.getReturnedItems().stream()
+                    .map(item -> ReturnedItemResponseDto.builder()
+                            .id(item.getId())
+                            .assetNumber(item.getEquipment().getAssetNumber())
+                            .serialNumber(item.getEquipment().getSerialNumber())
+                            .equipmentType(item.getEquipment().getEquipmentType())
+                            .itemCondition(item.getItemCondition())
+                            .remarks(item.getRemarks())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        IctChecklistResponseDto checklistDto = null;
+        if (transaction.getChecklist() != null) {
+            IctChecklist checklist = transaction.getChecklist();
+            checklistDto = IctChecklistResponseDto.builder()
+                    .id(checklist.getId())
+                    .osInstalled(checklist.getOsInstalled())
+                    .appSystemInstalled(checklist.getAppSystemInstalled())
+                    .antiVirusInstalled(checklist.getAntiVirusInstalled())
+                    .pdfReaderInstalled(checklist.getPdfReaderInstalled())
+                    .isJoinedToDomain(checklist.getIsJoinedToDomain())
+                    .isInstalledVpn(checklist.getIsInstalledVpn())
+                    .isInstalledPrinter(checklist.getIsInstalledPrinter())
+                    .additionalNotes(checklist.getAdditionalNotes())
+                    .build();
+        }
+
+        return TransactionResponseDto.builder()
+                .id(transaction.getId())
+                .transactionCode(transaction.getTransactionCode())
+                .staffId(transaction.getStaffId())
+                .staffName(staffName)
+                .issuingOfficerId(transaction.getIssuingOfficerId())
+                .issuingOfficerName(officerName)
+                .status(transaction.getStatus().name())
+                .employeeSignature(transaction.getEmployeeSignature())
+                .officerSignature(transaction.getOfficerSignature())
+                .employeeSignedAt(transaction.getEmployeeSignedAt())
+                .officerSignedAt(transaction.getOfficerSignedAt())
+                .createdAt(transaction.getCreatedAt())
+                .updatedAt(transaction.getUpdatedAt())
+                .issuedItems(issuedItemDtos)
+                .returnedItems(returnedItemDtos)
+                .checklist(checklistDto)
+                .build();
+    }
+}
