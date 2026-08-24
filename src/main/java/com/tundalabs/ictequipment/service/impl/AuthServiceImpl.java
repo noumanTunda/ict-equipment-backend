@@ -123,4 +123,21 @@ public class AuthServiceImpl implements AuthService {
 
         return ApiResponse.success(201, "User registered successfully", savedUser.toUserProfileDto());
     }
+
+    @Override
+    public ApiResponse<Void> resetPassword(ResetPasswordRequestDto resetPasswordRequest) {
+        User user = userRepository.findByEmail(resetPasswordRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + resetPasswordRequest.getEmail()));
+
+        if (!passwordEncoder.matches(resetPasswordRequest.getOldPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Password successfully reset for email: {}", user.getEmail());
+
+        return ApiResponse.success(200, "Password reset successfully", null);
+    }
 }

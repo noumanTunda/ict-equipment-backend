@@ -44,4 +44,11 @@ public class AuthController {
         ApiResponse<UserProfileDto> response = authService.register(registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequestDto resetPasswordRequest) {
+        log.info("Password reset request for email: {}", resetPasswordRequest.getEmail());
+        ApiResponse<Void> response = authService.resetPassword(resetPasswordRequest);
+        return ResponseEntity.ok(response);
+    }
 }
