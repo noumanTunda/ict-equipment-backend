@@ -3,6 +3,7 @@ package com.tundalabs.ictequipment.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -13,7 +14,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
-
+@Getter
 @Component
 @Slf4j
 public class JwtTokenProvider {
@@ -96,11 +97,4 @@ public class JwtTokenProvider {
         return false;
     }
 
-    public long getAccessTokenExpiration() {
-        return accessTokenExpiration;
-    }
-
-    public long getRefreshTokenExpiration() {
-        return refreshTokenExpiration;
-    }
 }
