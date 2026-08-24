@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ict-equipemnt
+  datasource:
+      url: ${SPRING_DATASOURCE_URL}
+      username: ${MYSQLUSER}
+      password: ${MYSQLPASSWORD}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
