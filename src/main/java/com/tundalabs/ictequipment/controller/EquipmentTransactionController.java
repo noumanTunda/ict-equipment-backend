@@ -1,6 +1,7 @@
 package com.tundalabs.ictequipment.controller;
 
 import com.tundalabs.ictequipment.dto.*;
+import com.tundalabs.ictequipment.entity.EquipmentTransaction;
 import com.tundalabs.ictequipment.service.EquipmentTransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

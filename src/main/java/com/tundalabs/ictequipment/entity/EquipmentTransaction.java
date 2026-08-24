@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -56,11 +57,11 @@ public class EquipmentTransaction {
 
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<TransactionIssuedItem> issuedItems;
+    private List<TransactionIssuedItem> issuedItems = new ArrayList<>();
 
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<TransactionReturnedItem> returnedItems;
+    private List<TransactionReturnedItem> returnedItems = new ArrayList<>();
 
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     private IctChecklist checklist;
