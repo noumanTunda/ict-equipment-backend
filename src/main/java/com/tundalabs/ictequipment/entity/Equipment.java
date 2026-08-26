@@ -36,6 +36,12 @@ public class Equipment {
     @Column(name = "description", length = 255)
     private String description;
 
+    @Column(name = "brand_model", length = 100)
+    private String brandModel;
+
+    @Column(name = "supplier_details", length = 255)
+    private String supplierDetails;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
