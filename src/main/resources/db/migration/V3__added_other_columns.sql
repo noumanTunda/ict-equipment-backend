@@ -1,0 +1,5 @@
+ALTER TABLE ict_checklists
+    ADD COLUMN additional_notes VARCHAR(255) NULL;
+
+ALTER TABLE transaction_returned_items
+    ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
