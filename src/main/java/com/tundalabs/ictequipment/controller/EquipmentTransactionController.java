@@ -47,7 +47,7 @@ public class EquipmentTransactionController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<TransactionResponseDto>>> getTransactions(
-            @RequestParam(required = false) String staffId,
+            @RequestParam(required = false) Long staffId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,

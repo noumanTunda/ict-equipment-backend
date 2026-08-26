@@ -17,13 +17,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateTransactionRequestDto {
-    @NotBlank(message = "Staff ID is required")
-    @Size(max = 30, message = "Staff ID must not exceed 30 characters")
-    private String staffId;
+    @NotNull(message = "Staff ID is required")
+    private Long staffId;
 
-    @NotBlank(message = "Issuing officer ID is required")
-    @Size(max = 30, message = "Issuing officer ID must not exceed 30 characters")
-    private String issuingOfficerId;
+    @NotNull(message = "Issuing officer ID is required")
+    private Long issuingOfficerId;
 
     @Valid
     @NotEmpty(message = "At least one issued item is required")

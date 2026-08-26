@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionFilterParams {
-    private String staffId;
+    private Long staffId;
     private TransactionStatus status;
     private LocalDateTime startDate;
     private LocalDateTime endDate;

@@ -18,13 +18,13 @@ public interface EquipmentTransactionRepository extends JpaRepository<EquipmentT
 
     Optional<EquipmentTransaction> findByTransactionCode(String transactionCode);
 
-    List<EquipmentTransaction> findByStaffId(String staffId);
+    List<EquipmentTransaction> findByStaffId(Long staffId);
 
-    List<EquipmentTransaction> findByIssuingOfficerId(String issuingOfficerId);
+    List<EquipmentTransaction> findByIssuingOfficerId(Long issuingOfficerId);
 
     List<EquipmentTransaction> findByStatus(TransactionStatus status);
 
-    Page<EquipmentTransaction> findByStaffId(String staffId, Pageable pageable);
+    Page<EquipmentTransaction> findByStaffId(Long staffId, Pageable pageable);
 
     Page<EquipmentTransaction> findByStatus(TransactionStatus status, Pageable pageable);
 
@@ -34,7 +34,7 @@ public interface EquipmentTransactionRepository extends JpaRepository<EquipmentT
            "(:startDate IS NULL OR t.createdAt >= :startDate) AND " +
            "(:endDate IS NULL OR t.createdAt <= :endDate)")
     Page<EquipmentTransaction> findByFilters(
-            @Param("staffId") String staffId,
+            @Param("staffId") Long staffId,
             @Param("status") TransactionStatus status,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
@@ -43,5 +43,5 @@ public interface EquipmentTransactionRepository extends JpaRepository<EquipmentT
     boolean existsByTransactionCode(String transactionCode);
 
     @Query("SELECT COUNT(t) FROM EquipmentTransaction t WHERE t.staffId = :staffId AND t.status = :status")
-    long countByStaffIdAndStatus(@Param("staffId") String staffId, @Param("status") TransactionStatus status);
+    long countByStaffIdAndStatus(@Param("staffId") Long staffId, @Param("status") TransactionStatus status);
 }

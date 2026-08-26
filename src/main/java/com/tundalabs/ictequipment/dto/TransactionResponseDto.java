@@ -16,9 +16,9 @@ import java.util.List;
 public class TransactionResponseDto {
     private Long id;
     private String transactionCode;
-    private String staffId;
+    private Long staffId;
     private String staffName;
-    private String issuingOfficerId;
+    private Long issuingOfficerId;
     private String issuingOfficerName;
     private String status;
     private String employeeSignature;

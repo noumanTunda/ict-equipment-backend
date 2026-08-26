@@ -33,7 +33,7 @@ public class Equipment {
     @Column(name = "status", nullable = false, length = 20)
     private EquipmentStatus status;
 
-    @Column(name = "description", length = 500)
+    @Column(name = "description", length = 255)
     private String description;
 
     @Column(name = "created_at", updatable = false)

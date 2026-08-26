@@ -45,7 +45,7 @@ public class IctChecklist {
     @Column(name = "is_installed_printer")
     private Boolean isInstalledPrinter;
 
-    @Column(name = "additional_notes", length = 500)
+    @Column(name = "additional_notes", length = 255)
     private String additionalNotes;
 
     @Column(name = "created_at", updatable = false)

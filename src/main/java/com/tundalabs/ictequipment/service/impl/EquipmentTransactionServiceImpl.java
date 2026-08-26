@@ -40,10 +40,10 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         log.info("Creating transaction for staff ID: {}", request.getStaffId());
 
         // Validate staff and issuing officer exist
-        User staff = userRepository.findByEmployeeId(request.getStaffId())
+        User staff = userRepository.findById(request.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found with ID: " + request.getStaffId()));
 
-        User officer = userRepository.findByEmployeeId(request.getIssuingOfficerId())
+        User officer = userRepository.findById(request.getIssuingOfficerId())
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found with ID: " + request.getIssuingOfficerId()));
 
         // Generate unique transaction code
@@ -86,9 +86,9 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         EquipmentTransaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
 
-        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+        User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
-        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
@@ -99,9 +99,9 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         EquipmentTransaction transaction = transactionRepository.findByTransactionCode(transactionCode)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with code: " + transactionCode));
 
-        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+        User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
-        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
@@ -118,8 +118,8 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         );
 
         return transactions.map(transaction -> {
-            User staff = userRepository.findByEmployeeId(transaction.getStaffId()).orElse(null);
-            User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId()).orElse(null);
+            User staff = userRepository.findById(transaction.getStaffId()).orElse(null);
+            User officer = userRepository.findById(transaction.getIssuingOfficerId()).orElse(null);
             return mapToResponseDto(transaction,
                     staff != null ? staff.getFullName() : null,
                     officer != null ? officer.getFullName() : null);
@@ -159,9 +159,9 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         transaction = transactionRepository.save(transaction);
         log.info("Transaction completed successfully with ID: {}", transactionId);
 
-        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+        User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
-        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
@@ -191,9 +191,9 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
 
         log.info("Transaction cancelled successfully with ID: {}", transactionId);
 
-        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+        User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
-        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
@@ -204,9 +204,9 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         EquipmentTransaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
 
-        User staff = userRepository.findByEmployeeId(transaction.getStaffId())
+        User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
-        User officer = userRepository.findByEmployeeId(transaction.getIssuingOfficerId())
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {

@@ -26,10 +26,10 @@ public class EquipmentTransaction {
     private String transactionCode;
 
     @Column(name = "staff_id", nullable = false, length = 30)
-    private String staffId;
+    private Long staffId;
 
-    @Column(name = "issuing_officer_id", nullable = false, length = 30)
-    private String issuingOfficerId;
+    @Column(name = "issuing_officer_id", nullable = false)
+    private Long issuingOfficerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
