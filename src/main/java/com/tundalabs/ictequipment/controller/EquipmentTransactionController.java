@@ -5,7 +5,7 @@ import com.tundalabs.ictequipment.entity.EquipmentTransaction;
 import com.tundalabs.ictequipment.service.EquipmentTransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,16 +24,20 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Equipment Transactions", description = "APIs for managing ICT equipment transactions")
+@SecurityRequirement(name = "bearerAuth")
 public class EquipmentTransactionController {
 
     private final EquipmentTransactionService transactionService;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ICT_OFFICER', 'ROLE_ADMIN')")
     @Operation(summary = "Create a new equipment transaction", description = "Creates a new equipment issuance/return transaction with issued items, returned items, and checklist")
     @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Transaction created successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Staff or issuing officer not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Staff or issuing officer not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public ResponseEntity<ApiResponse<TransactionResponseDto>> createTransaction(
             @Valid @RequestBody CreateTransactionRequestDto request) {
@@ -40,6 +45,24 @@ public class EquipmentTransactionController {
         TransactionResponseDto response = transactionService.createTransaction(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "Transaction created successfully", response));
+    }
+
+    @PostMapping("/issue")
+    @PreAuthorize("hasAnyAuthority('ROLE_ICT_OFFICER', 'ROLE_ADMIN')")
+    @Operation(summary = "Issue ICT equipment to staff", description = "Issues ICT equipment to a staff member with mandatory ICT checklist. Requires ICT_OFFICER or ADMIN role.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Equipment issued successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data or missing ICT checklist"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Staff, issuing officer, or equipment not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<TransactionResponseDto>> issueEquipment(
+            @Valid @RequestBody IssueEquipmentRequestDto request) {
+        log.info("Issuing equipment to staff ID: {}", request.getStaffId());
+        TransactionResponseDto response = transactionService.issueEquipment(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(HttpStatus.CREATED.value(), "Equipment issued successfully", response));
     }
 
     @GetMapping("/{id}")

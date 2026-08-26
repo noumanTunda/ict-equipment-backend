@@ -8,6 +8,8 @@ public interface EquipmentTransactionService {
 
     TransactionResponseDto createTransaction(CreateTransactionRequestDto request);
 
+    TransactionResponseDto issueEquipment(IssueEquipmentRequestDto request);
+
     TransactionResponseDto getTransactionById(Long id);
 
     TransactionResponseDto getTransactionByCode(String transactionCode);

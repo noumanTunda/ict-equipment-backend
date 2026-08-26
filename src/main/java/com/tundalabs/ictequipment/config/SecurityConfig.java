@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/equipment-transactions/**").hasAnyAuthority("ROLE_ICT_OFFICER", "ROLE_ADMIN")
                         .requestMatchers("/api/v1/equipment/**").hasAnyAuthority("ROLE_ICT_OFFICER", "ROLE_ADMIN")
+                        .requestMatchers("/api/v1/equipment-requests/admin/**").hasAnyAuthority("ROLE_ICT_OFFICER", "ROLE_ADMIN")
+                        .requestMatchers("/api/v1/equipment-requests/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

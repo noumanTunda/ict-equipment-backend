@@ -82,6 +82,49 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
     }
 
     @Override
+    @Transactional
+    public TransactionResponseDto issueEquipment(IssueEquipmentRequestDto request) {
+        log.info("Issuing equipment to staff ID: {}", request.getStaffId());
+
+        // Validate staff and issuing officer exist
+        User staff = userRepository.findById(request.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found with ID: " + request.getStaffId()));
+
+        User officer = userRepository.findById(request.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found with ID: " + request.getIssuingOfficerId()));
+
+        // Generate unique transaction code
+        String transactionCode = generateTransactionCode();
+
+        // Create transaction for equipment issuance
+        EquipmentTransaction transaction = EquipmentTransaction.builder()
+                .transactionCode(transactionCode)
+                .staffId(request.getStaffId())
+                .issuingOfficerId(request.getIssuingOfficerId())
+                .status(EquipmentTransaction.TransactionStatus.PENDING_SIGNATURE)
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        // Process issued items (Part B)
+        List<TransactionIssuedItem> issuedItems = processIssuedItems(request.getIssuedItems(), transaction);
+        transaction.setIssuedItems(issuedItems);
+
+        // Process ICT checklist (Part E) - mandatory for equipment issuance
+        if (request.getChecklist() != null) {
+            IctChecklist checklist = processChecklist(request.getChecklist(), transaction);
+            transaction.setChecklist(checklist);
+        } else {
+            throw new IllegalArgumentException("ICT checklist is required for equipment issuance");
+        }
+
+        transaction = transactionRepository.save(transaction);
+        log.info("Equipment issued successfully with transaction code: {}", transactionCode);
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
     public TransactionResponseDto getTransactionById(Long id) {
         EquipmentTransaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
@@ -147,6 +190,29 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         }
         if (request.getOfficerSignature() == null || request.getOfficerSignature().isEmpty()) {
             throw new RuntimeException("Officer signature is required");
+        }
+
+        // Update equipment statuses now that transaction is being completed
+        if (transaction.getIssuedItems() != null) {
+            transaction.getIssuedItems().forEach(issuedItem -> {
+                Equipment equipment = issuedItem.getEquipment();
+                if (equipment.getStatus() == Equipment.EquipmentStatus.AVAILABLE) {
+                    equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
+                    equipmentRepository.save(equipment);
+                    log.info("Updated equipment {} from AVAILABLE to ISSUED", equipment.getAssetNumber());
+                }
+            });
+        }
+
+        if (transaction.getReturnedItems() != null) {
+            transaction.getReturnedItems().forEach(returnedItem -> {
+                Equipment equipment = returnedItem.getEquipment();
+                if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
+                    equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
+                    equipmentRepository.save(equipment);
+                    log.info("Updated equipment {} from ISSUED to RETURNED", equipment.getAssetNumber());
+                }
+            });
         }
 
         // Save signatures and timestamps
@@ -317,9 +383,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Update equipment status to ISSUED
-            equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
-            equipmentRepository.save(equipment);
+            // Note: Equipment status will be updated to ISSUED when transaction is completed (signatures submitted)
 
             TransactionIssuedItem issuedItem = TransactionIssuedItem.builder()
                     .transaction(transaction)
@@ -343,9 +407,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Update equipment status to RETURNED
-            equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
-            equipmentRepository.save(equipment);
+            // Note: Equipment status will be updated to RETURNED when transaction is completed (signatures submitted)
 
             TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
                     .transaction(transaction)
@@ -375,29 +437,9 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
     }
 
     private void rollbackEquipmentStatuses(EquipmentTransaction transaction) {
-        // Rollback issued items: ISSUED -> AVAILABLE
-        if (transaction.getIssuedItems() != null) {
-            transaction.getIssuedItems().forEach(issuedItem -> {
-                Equipment equipment = issuedItem.getEquipment();
-                if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
-                    equipment.setStatus(Equipment.EquipmentStatus.AVAILABLE);
-                    equipmentRepository.save(equipment);
-                    log.info("Rolled back equipment {} from ISSUED to AVAILABLE", equipment.getAssetNumber());
-                }
-            });
-        }
-
-        // Rollback returned items: RETURNED -> ISSUED
-        if (transaction.getReturnedItems() != null) {
-            transaction.getReturnedItems().forEach(returnedItem -> {
-                Equipment equipment = returnedItem.getEquipment();
-                if (equipment.getStatus() == Equipment.EquipmentStatus.RETURNED) {
-                    equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
-                    equipmentRepository.save(equipment);
-                    log.info("Rolled back equipment {} from RETURNED to ISSUED", equipment.getAssetNumber());
-                }
-            });
-        }
+        // No rollback needed since equipment statuses are only updated on signature submission
+        // If transaction is cancelled before signatures, equipment statuses remain unchanged
+        log.info("No equipment status rollback needed for transaction {}", transaction.getTransactionCode());
     }
 
     private String generateTransactionCode() {
