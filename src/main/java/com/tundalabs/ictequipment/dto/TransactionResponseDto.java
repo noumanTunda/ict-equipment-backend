@@ -1,6 +1,5 @@
 package com.tundalabs.ictequipment.dto;
 
-import com.tundalabs.ictequipment.entity.EquipmentTransaction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
