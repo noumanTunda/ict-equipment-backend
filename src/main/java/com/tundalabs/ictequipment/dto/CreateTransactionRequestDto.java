@@ -1,5 +1,6 @@
 package com.tundalabs.ictequipment.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -14,20 +15,26 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Request DTO for creating a new equipment transaction")
 public class CreateTransactionRequestDto {
     @NotNull(message = "Staff ID is required")
+    @Schema(description = "ID of the staff member requesting equipment", example = "1")
     private Long staffId;
 
     @NotNull(message = "Issuing officer ID is required")
+    @Schema(description = "ID of the ICT officer issuing the equipment", example = "2")
     private Long issuingOfficerId;
 
     @Valid
     @NotEmpty(message = "At least one issued item is required")
+    @Schema(description = "List of equipment items to be issued")
     private List<IssuedItemRequestDto> issuedItems;
 
     @Valid
+    @Schema(description = "List of equipment items being returned (optional)")
     private List<ReturnedItemRequestDto> returnedItems;
 
     @Valid
+    @Schema(description = "ICT checklist for equipment configuration (optional)")
     private IctChecklistRequestDto checklist;
 }
