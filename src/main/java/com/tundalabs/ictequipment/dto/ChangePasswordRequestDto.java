@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ResetPasswordRequestDto {
+public class ChangePasswordRequestDto {
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     @Size(max = 50, message = "Email must not exceed 50 characters")
