@@ -3,7 +3,6 @@ package com.tundalabs.ictequipment.controller;
 import com.tundalabs.ictequipment.dto.*;
 import com.tundalabs.ictequipment.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -71,15 +70,37 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/reset-password")
-    @Operation(summary = "Reset password", description = "Initiates a password reset for a user")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password reset initiated"),
+    @PostMapping("/change-password")
+    @Operation(summary = "Change password", description = "Initiates a password change for a user")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password Change initiated"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
-    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequestDto resetPasswordRequest) {
-        log.info("Password reset request for email: {}", resetPasswordRequest.getEmail());
-        ApiResponse<Void> response = authService.resetPassword(resetPasswordRequest);
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequestDto changePasswordRequest) {
+        log.info("Password change request for email: {}", changePasswordRequest.getEmail());
+        ApiResponse<Void> response = authService.changePassword(changePasswordRequest);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping("/forgot-password")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password reset link sent if account exists")
+    })
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(@Valid @RequestBody ResetPasswordRequestDto request) {
+        log.info("Password reset requested for email: {}", request.getEmail());
+        ApiResponse<Void> response = authService.requestPasswordReset(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid payload or expired token")
+    })
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordDto dto) {
+        log.info("Executing password reset for token: {}", dto.getToken());
+        ApiResponse<Void> response = authService.resetPassword(dto);
         return ResponseEntity.ok(response);
     }
 }

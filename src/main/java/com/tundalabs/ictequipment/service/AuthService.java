@@ -7,5 +7,7 @@ public interface AuthService {
     JwtResponseDto refreshToken(RefreshTokenRequestDto refreshTokenRequest);
     ApiResponse<UserProfileDto> getCurrentUser();
     ApiResponse<UserProfileDto> register(RegisterRequestDto registerRequest);
-    ApiResponse<Void> resetPassword(ResetPasswordRequestDto resetPasswordRequest);
+    ApiResponse<Void> changePassword(ChangePasswordRequestDto resetPasswordRequest);
+    ApiResponse<Void> requestPasswordReset(ResetPasswordRequestDto dto);
+    ApiResponse<Void> resetPassword(ResetPasswordDto dto);
 }

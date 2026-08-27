@@ -1,10 +1,13 @@
 package com.tundalabs.ictequipment.service.impl;
 
 import com.tundalabs.ictequipment.dto.*;
+import com.tundalabs.ictequipment.entity.PasswordResetToken;
 import com.tundalabs.ictequipment.entity.User;
+import com.tundalabs.ictequipment.repository.PasswordResetTokenRepository;
 import com.tundalabs.ictequipment.repository.UserRepository;
 import com.tundalabs.ictequipment.security.JwtTokenProvider;
 import com.tundalabs.ictequipment.service.AuthService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,6 +16,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -23,6 +29,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetTokenRepository tokenRepository;
+    private final EmailServiceImpl emailService;
 
     @Override
     public JwtResponseDto login(LoginRequestDto loginRequest) {
@@ -125,19 +133,69 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ApiResponse<Void> resetPassword(ResetPasswordRequestDto resetPasswordRequest) {
-        User user = userRepository.findByEmail(resetPasswordRequest.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + resetPasswordRequest.getEmail()));
+    public ApiResponse<Void> changePassword(ChangePasswordRequestDto changePasswordRequest) {
+        User user = userRepository.findByEmail(changePasswordRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + changePasswordRequest.getEmail()));
 
-        if (!passwordEncoder.matches(resetPasswordRequest.getOldPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid current password");
         }
 
-        user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
+        user.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
         userRepository.save(user);
 
-        log.info("Password successfully reset for email: {}", user.getEmail());
+        log.info("Password successfully changed for email: {}", user.getEmail());
 
-        return ApiResponse.success(200, "Password reset successfully", null);
+        return ApiResponse.success(200, "Password Changed successfully", null);
     }
+
+    @Transactional
+    public ApiResponse<Void> requestPasswordReset(ResetPasswordRequestDto dto) {
+        User user = userRepository.findByEmail(dto.getEmail()).orElse(null);
+
+        if (user != null) {
+            PasswordResetToken resetToken = tokenRepository.findByUser(user)
+                    .orElseGet(() -> PasswordResetToken.builder()
+                            .user(user)
+                            .build());
+
+            String newToken = UUID.randomUUID().toString();
+            resetToken.setToken(newToken);
+            resetToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+
+            tokenRepository.save(resetToken);
+
+            emailService.sendPasswordResetEmail(user.getEmail(), newToken);
+            log.info("Password reset token generated/updated for user {}: {}", user.getEmail(), newToken);
+        } else {
+            log.warn("Password reset requested for non-existent email: {}", dto.getEmail());
+        }
+
+        return ApiResponse.success(200, "If an account exists with that email, a password reset link has been sent.");
+    }
+
+    @Transactional
+    public ApiResponse<Void> resetPassword(ResetPasswordDto dto) {
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new IllegalArgumentException("New password and confirm password do not match.");
+        }
+
+        PasswordResetToken resetToken = tokenRepository.findByToken(dto.getToken())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired password reset token."));
+
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            tokenRepository.delete(resetToken);
+            throw new IllegalStateException("Password reset token has expired.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+
+        tokenRepository.delete(resetToken);
+        log.info("Password successfully updated for user: {}", user.getEmail());
+
+        return ApiResponse.success(200, "Password has been successfully updated.");
+    }
+
 }
