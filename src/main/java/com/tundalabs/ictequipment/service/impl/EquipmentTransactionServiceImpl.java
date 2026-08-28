@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -65,7 +67,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
 
         // Process returned items (Part C) if provided
         if (request.getReturnedItems() != null && !request.getReturnedItems().isEmpty()) {
-            List<TransactionReturnedItem> returnedItems = processReturnedItems(request.getReturnedItems(), transaction);
+            Set<TransactionReturnedItem> returnedItems = new HashSet<>(processReturnedItems(request.getReturnedItems(), transaction));
             transaction.setReturnedItems(returnedItems);
         }
 
@@ -160,12 +162,24 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 pageable
         );
 
+        // Collect all staff IDs and officer IDs
+        List<Long> staffIds = transactions.getContent().stream().map(EquipmentTransaction::getStaffId).distinct().toList();
+        List<Long> officerIds = transactions.getContent().stream().map(EquipmentTransaction::getIssuingOfficerId).distinct().toList();
+        
+        // Batch fetch all users
+        List<User> staffUsers = userRepository.findAllById(staffIds);
+        List<User> officerUsers = userRepository.findAllById(officerIds);
+        
+        // Create maps for quick lookup
+        java.util.Map<Long, String> staffNameMap = staffUsers.stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getFullName));
+        java.util.Map<Long, String> officerNameMap = officerUsers.stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getFullName));
+
         return transactions.map(transaction -> {
-            User staff = userRepository.findById(transaction.getStaffId()).orElse(null);
-            User officer = userRepository.findById(transaction.getIssuingOfficerId()).orElse(null);
-            return mapToResponseDto(transaction,
-                    staff != null ? staff.getFullName() : null,
-                    officer != null ? officer.getFullName() : null);
+            String staffName = staffNameMap.get(transaction.getStaffId());
+            String officerName = officerNameMap.get(transaction.getIssuingOfficerId());
+            return mapToResponseDto(transaction, staffName, officerName);
         });
     }
 

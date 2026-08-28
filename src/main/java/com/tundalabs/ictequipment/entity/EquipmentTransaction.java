@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "equipment_transactions")
@@ -36,11 +38,11 @@ public class EquipmentTransaction {
     private TransactionStatus status;
 
     @Lob
-    @Column(name = "employee_signature")
+    @Column(name = "employee_signature", columnDefinition = "LONGTEXT")
     private String employeeSignature;
 
     @Lob
-    @Column(name = "officer_signature")
+    @Column(name = "officer_signature", columnDefinition = "LONGTEXT")
     private String officerSignature;
 
     @Column(name = "employee_signed_at")
@@ -61,7 +63,7 @@ public class EquipmentTransaction {
 
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<TransactionReturnedItem> returnedItems = new ArrayList<>();
+    private Set<TransactionReturnedItem> returnedItems = new HashSet<>();
 
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     private IctChecklist checklist;

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -128,12 +129,26 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
         List<EquipmentRequest> requests = requestRepository.findByStaffId(staffId);
         User staff = userRepository.findById(staffId).orElse(null);
         
+        // Collect all approvedBy IDs
+        List<Long> approvedByIds = requests.stream()
+                .map(EquipmentRequest::getApprovedBy)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        
+        // Batch fetch all approvedBy users
+        List<User> approvedByUsers = approvedByIds.isEmpty() ? List.of() : userRepository.findAllById(approvedByIds);
+        
+        // Create map for quick lookup
+        java.util.Map<Long, String> approvedByNameMap = approvedByUsers.stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getFullName));
+        
         return requests.stream()
                 .map(req -> {
-                    User approvedBy = req.getApprovedBy() != null ? userRepository.findById(req.getApprovedBy()).orElse(null) : null;
+                    String approvedByName = req.getApprovedBy() != null ? approvedByNameMap.get(req.getApprovedBy()) : null;
                     return mapToResponseDto(req, 
                             staff != null ? staff.getFullName() : null,
-                            approvedBy != null ? approvedBy.getFullName() : null,
+                            approvedByName,
                             null);
                 })
                 .collect(Collectors.toList());
@@ -144,11 +159,25 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
         Page<EquipmentRequest> requests = requestRepository.findByStaffId(staffId, pageable);
         User staff = userRepository.findById(staffId).orElse(null);
         
+        // Collect all approvedBy IDs
+        List<Long> approvedByIds = requests.getContent().stream()
+                .map(EquipmentRequest::getApprovedBy)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        
+        // Batch fetch all approvedBy users
+        List<User> approvedByUsers = approvedByIds.isEmpty() ? List.of() : userRepository.findAllById(approvedByIds);
+        
+        // Create map for quick lookup
+        java.util.Map<Long, String> approvedByNameMap = approvedByUsers.stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getFullName));
+        
         return requests.map(req -> {
-            User approvedBy = req.getApprovedBy() != null ? userRepository.findById(req.getApprovedBy()).orElse(null) : null;
+            String approvedByName = req.getApprovedBy() != null ? approvedByNameMap.get(req.getApprovedBy()) : null;
             return mapToResponseDto(req, 
                     staff != null ? staff.getFullName() : null,
-                    approvedBy != null ? approvedBy.getFullName() : null,
+                    approvedByName,
                     null);
         });
     }
@@ -157,13 +186,28 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
     public Page<EquipmentRequestResponseDto> getAllRequests(EquipmentRequest.RequestStatus status, Pageable pageable) {
         Page<EquipmentRequest> requests = requestRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
         
+        // Collect all staff IDs and approvedBy IDs
+        List<Long> staffIds = requests.getContent().stream().map(EquipmentRequest::getStaffId).distinct().toList();
+        List<Long> approvedByIds = requests.getContent().stream()
+                .map(EquipmentRequest::getApprovedBy)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        
+        // Batch fetch all users
+        List<User> staffUsers = userRepository.findAllById(staffIds);
+        List<User> approvedByUsers = approvedByIds.isEmpty() ? List.of() : userRepository.findAllById(approvedByIds);
+        
+        // Create maps for quick lookup
+        java.util.Map<Long, String> staffNameMap = staffUsers.stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getFullName));
+        java.util.Map<Long, String> approvedByNameMap = approvedByUsers.stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getFullName));
+        
         return requests.map(req -> {
-            User staff = userRepository.findById(req.getStaffId()).orElse(null);
-            User approvedBy = req.getApprovedBy() != null ? userRepository.findById(req.getApprovedBy()).orElse(null) : null;
-            return mapToResponseDto(req, 
-                    staff != null ? staff.getFullName() : null,
-                    approvedBy != null ? approvedBy.getFullName() : null,
-                    null);
+            String staffName = staffNameMap.get(req.getStaffId());
+            String approvedByName = req.getApprovedBy() != null ? approvedByNameMap.get(req.getApprovedBy()) : null;
+            return mapToResponseDto(req, staffName, approvedByName, null);
         });
     }
 
@@ -303,7 +347,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                     .remarks(approvalRequest.getReturnRemarks())
                     .build();
             returnedItemRepository.save(returnedItem);
-            transaction.setReturnedItems(List.of(returnedItem));
+            transaction.setReturnedItems(new HashSet<>(List.of(returnedItem)));
 
         } else if (equipmentRequest.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) {
             // Return old equipment
@@ -323,7 +367,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                     .remarks(approvalRequest.getReturnRemarks())
                     .build();
             returnedItemRepository.save(returnedItem);
-            transaction.setReturnedItems(List.of(returnedItem));
+            transaction.setReturnedItems(new HashSet<>(List.of(returnedItem)));
 
             // Issue new equipment
             if (issueAssetNum == null) {
