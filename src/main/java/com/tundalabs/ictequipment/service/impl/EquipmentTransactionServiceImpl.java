@@ -397,7 +397,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Note: Equipment status will be updated to ISSUED when transaction is completed (signatures submitted)
+            // Equipment status will be updated to ISSUED when transaction is completed(9signatures submitted)
 
             TransactionIssuedItem issuedItem = TransactionIssuedItem.builder()
                     .transaction(transaction)

@@ -52,6 +52,7 @@ public class Equipment {
         AVAILABLE,
         ISSUED,
         RETURNED,
+        DISPOSED,
         MAINTENANCE
     }
 
