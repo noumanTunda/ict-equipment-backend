@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
@@ -326,7 +327,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                     .accessoriesProvided(approvalRequest.getAccessoriesProvided())
                     .build();
             issuedItemRepository.save(issuedItem);
-            transaction.setIssuedItems(List.of(issuedItem));
+            transaction.setIssuedItems(new ArrayList<>(List.of(issuedItem)));
 
         } else if (equipmentRequest.getRequestType() == EquipmentRequest.RequestType.RETURN) {
             // Return equipment
@@ -385,11 +386,13 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                     .accessoriesProvided(approvalRequest.getAccessoriesProvided())
                     .build();
             issuedItemRepository.save(issuedItem);
-            transaction.setIssuedItems(List.of(issuedItem));
+            transaction.setIssuedItems(new ArrayList<>(List.of(issuedItem)));
         }
 
-        // Process ICT checklist
-        if (approvalRequest.getChecklist() != null) {
+        // Process ICT checklist only for ISSUE and EXCHANGE requests
+        if ((equipmentRequest.getRequestType() == EquipmentRequest.RequestType.ISSUE || 
+             equipmentRequest.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) && 
+            approvalRequest.getChecklist() != null) {
             IctChecklist checklist = processChecklist(approvalRequest.getChecklist(), transaction);
             transaction.setChecklist(checklist);
         }
