@@ -26,8 +26,7 @@ public class ApproveEquipmentRequestDto {
     private String returnAssetNumber;
 
     @Valid
-    @NotNull(message = "ICT checklist is required for approval")
-    @Schema(description = "ICT configuration checklist for the equipment")
+    @Schema(description = "ICT configuration checklist for the equipment (required for ISSUE and EXCHANGE requests)")
     private IctChecklistRequestDto checklist;
 
     @Schema(description = "Accessories provided with issued equipment", example = "Charger, Mouse, Bag")
