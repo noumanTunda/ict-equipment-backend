@@ -178,8 +178,7 @@ public class EquipmentRequestController {
         // Fallback: if principal is a String (employeeId), look up the user
         if (principal instanceof String) {
             String employeeId = (String) principal;
-            // Note: We'd need to inject UserRepository here, but since we're in a controller
-            // and the User object should be available as principal, this is a fallback
+
             throw new IllegalStateException("Unexpected principal type: String. Expected User object.");
         }
         
