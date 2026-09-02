@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -198,46 +199,58 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             );
         }
 
-        // Validate signatures are present
-        if (request.getEmployeeSignature() == null || request.getEmployeeSignature().isEmpty()) {
-            throw new RuntimeException("Employee signature is required");
-        }
-        if (request.getOfficerSignature() == null || request.getOfficerSignature().isEmpty()) {
-            throw new RuntimeException("Officer signature is required");
+        // Validate at least one signature is provided
+        if ((request.getEmployeeSignature() == null || request.getEmployeeSignature().isEmpty()) &&
+            (request.getOfficerSignature() == null || request.getOfficerSignature().isEmpty())) {
+            throw new RuntimeException("At least one signature is required");
         }
 
-        // Update equipment statuses now that transaction is being completed
-        if (transaction.getIssuedItems() != null) {
-            transaction.getIssuedItems().forEach(issuedItem -> {
-                Equipment equipment = issuedItem.getEquipment();
-                if (equipment.getStatus() == Equipment.EquipmentStatus.AVAILABLE) {
-                    equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
-                    equipmentRepository.save(equipment);
-                    log.info("Updated equipment {} from AVAILABLE to ISSUED", equipment.getAssetNumber());
-                }
-            });
+        // Update employee signature if provided
+        if (request.getEmployeeSignature() != null && !request.getEmployeeSignature().isEmpty()) {
+            transaction.setEmployeeSignature(request.getEmployeeSignature());
+            transaction.setEmployeeSignedAt(LocalDateTime.now());
+            log.info("Employee signature submitted for transaction ID: {}", transactionId);
         }
 
-        if (transaction.getReturnedItems() != null) {
-            transaction.getReturnedItems().forEach(returnedItem -> {
-                Equipment equipment = returnedItem.getEquipment();
-                if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
-                    equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
-                    equipmentRepository.save(equipment);
-                    log.info("Updated equipment {} from ISSUED to RETURNED", equipment.getAssetNumber());
-                }
-            });
+        // Update officer signature if provided
+        if (request.getOfficerSignature() != null && !request.getOfficerSignature().isEmpty()) {
+            transaction.setOfficerSignature(request.getOfficerSignature());
+            transaction.setOfficerSignedAt(LocalDateTime.now());
+            log.info("Officer signature submitted for transaction ID: {}", transactionId);
         }
 
-        // Save signatures and timestamps
-        transaction.setEmployeeSignature(request.getEmployeeSignature());
-        transaction.setOfficerSignature(request.getOfficerSignature());
-        transaction.setEmployeeSignedAt(LocalDateTime.now());
-        transaction.setOfficerSignedAt(LocalDateTime.now());
-        transaction.setStatus(EquipmentTransaction.TransactionStatus.COMPLETED);
+        // Check if both signatures are now present - if so, complete the transaction
+        if (transaction.getEmployeeSignature() != null && !transaction.getEmployeeSignature().isEmpty() &&
+            transaction.getOfficerSignature() != null && !transaction.getOfficerSignature().isEmpty()) {
+            
+            // Update equipment statuses now that transaction is being completed
+            if (transaction.getIssuedItems() != null) {
+                transaction.getIssuedItems().forEach(issuedItem -> {
+                    Equipment equipment = issuedItem.getEquipment();
+                    if (equipment.getStatus() == Equipment.EquipmentStatus.AVAILABLE) {
+                        equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
+                        equipmentRepository.save(equipment);
+                        log.info("Updated equipment {} from AVAILABLE to ISSUED", equipment.getAssetNumber());
+                    }
+                });
+            }
+
+            if (transaction.getReturnedItems() != null) {
+                transaction.getReturnedItems().forEach(returnedItem -> {
+                    Equipment equipment = returnedItem.getEquipment();
+                    if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
+                        equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
+                        equipmentRepository.save(equipment);
+                        log.info("Updated equipment {} from ISSUED to RETURNED", equipment.getAssetNumber());
+                    }
+                });
+            }
+
+            transaction.setStatus(EquipmentTransaction.TransactionStatus.COMPLETED);
+            log.info("Transaction completed successfully with ID: {}", transactionId);
+        }
 
         transaction = transactionRepository.save(transaction);
-        log.info("Transaction completed successfully with ID: {}", transactionId);
 
         User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
@@ -374,8 +387,59 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             document.add(Chunk.NEWLINE);
 
             document.add(new Paragraph("PART G - SIGNATURES", headerFont));
-            document.add(new Paragraph("Employee Signed At: " + (transaction.getEmployeeSignedAt() != null ? transaction.getEmployeeSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "Not signed"), normalFont));
-            document.add(new Paragraph("Officer Signed At: " + (transaction.getOfficerSignedAt() != null ? transaction.getOfficerSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "Not signed"), normalFont));
+            
+            // Create 2-column table for signatures
+            Table signatureTable = new Table(2);
+            signatureTable.setWidths(new float[]{3f, 2f});
+            signatureTable.setWidth(100f);
+            
+            // Employee Signature Row
+            Cell employeeMetadataCell = new Cell();
+            employeeMetadataCell.setBorder(Rectangle.NO_BORDER);
+            employeeMetadataCell.add(new Phrase("Staff Signature:", headerFont));
+            employeeMetadataCell.add(Chunk.NEWLINE);
+            employeeMetadataCell.add(new Phrase("Name: " + staff.getFullName(), normalFont));
+            employeeMetadataCell.add(Chunk.NEWLINE);
+            String employeeSignedAt = transaction.getEmployeeSignedAt() != null 
+                ? transaction.getEmployeeSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) 
+                : "Not signed";
+            employeeMetadataCell.add(new Phrase("Signed At: " + employeeSignedAt, normalFont));
+            signatureTable.addCell(employeeMetadataCell);
+            
+            Cell employeeSignatureCell = new Cell();
+            employeeSignatureCell.setBorder(Rectangle.NO_BORDER);
+            Image employeeSignatureImage = createSignatureImage(transaction.getEmployeeSignature());
+            if (employeeSignatureImage != null) {
+                employeeSignatureCell.add(employeeSignatureImage);
+            } else {
+                employeeSignatureCell.add(new Phrase("[ No Signature ]", normalFont));
+            }
+            signatureTable.addCell(employeeSignatureCell);
+            
+            // Officer Signature Row
+            Cell officerMetadataCell = new Cell();
+            officerMetadataCell.setBorder(Rectangle.NO_BORDER);
+            officerMetadataCell.add(new Phrase("Officer Signature:", headerFont));
+            officerMetadataCell.add(Chunk.NEWLINE);
+            officerMetadataCell.add(new Phrase("Name: " + officer.getFullName(), normalFont));
+            officerMetadataCell.add(Chunk.NEWLINE);
+            String officerSignedAt = transaction.getOfficerSignedAt() != null 
+                ? transaction.getOfficerSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) 
+                : "Not signed";
+            officerMetadataCell.add(new Phrase("Signed At: " + officerSignedAt, normalFont));
+            signatureTable.addCell(officerMetadataCell);
+            
+            Cell officerSignatureCell = new Cell();
+            officerSignatureCell.setBorder(Rectangle.NO_BORDER);
+            Image officerSignatureImage = createSignatureImage(transaction.getOfficerSignature());
+            if (officerSignatureImage != null) {
+                officerSignatureCell.add(officerSignatureImage);
+            } else {
+                officerSignatureCell.add(new Phrase("[ No Signature ]", normalFont));
+            }
+            signatureTable.addCell(officerSignatureCell);
+            
+            document.add(signatureTable);
 
             document.close();
             return outputStream.toByteArray();
@@ -421,7 +485,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Note: Equipment status will be updated to RETURNED when transaction is completed (signatures submitted)
+            // Equipment status will be updated to RETURNED when transaction is completed (signatures submitted)
 
             TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
                     .transaction(transaction)
