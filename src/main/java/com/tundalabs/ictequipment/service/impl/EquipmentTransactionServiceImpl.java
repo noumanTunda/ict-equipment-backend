@@ -526,6 +526,37 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         return "TXN-" + timestamp + "-" + uuid;
     }
 
+    private Image createSignatureImage(String base64String) {
+        if (base64String == null || base64String.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // Strip data URI header if present
+            String sanitizedBase64 = base64String;
+            if (base64String.startsWith("data:image/")) {
+                int commaIndex = base64String.indexOf(",");
+                if (commaIndex != -1) {
+                    sanitizedBase64 = base64String.substring(commaIndex + 1);
+                }
+            }
+
+            // Decode Base64 to byte array
+            byte[] imageBytes = Base64.getDecoder().decode(sanitizedBase64);
+
+            // Create OpenPDF Image from bytes
+            Image signatureImage = Image.getInstance(imageBytes);
+            
+            // Scale to uniform dimensions
+            signatureImage.scaleToFit(120f, 40f);
+            
+            return signatureImage;
+        } catch (Exception e) {
+            log.error("Error decoding signature image from Base64", e);
+            return null;
+        }
+    }
+
     private TransactionResponseDto mapToResponseDto(EquipmentTransaction transaction, String staffName, String officerName) {
         List<IssuedItemResponseDto> issuedItemDtos = null;
         if (transaction.getIssuedItems() != null) {
