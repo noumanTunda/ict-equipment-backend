@@ -1,7 +1,11 @@
 package com.tundalabs.ictequipment.dto;
 
+import com.tundalabs.ictequipment.entity.Equipment;
+import com.tundalabs.ictequipment.entity.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,9 +29,9 @@ public class RegisterRequestDto {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    @NotBlank(message = "Department is required")
-    @Size(max = 80, message = "Department must not exceed 80 characters")
-    private String department;
+    @NotNull(message = "User must belong to a Department")
+    @Schema(description = "Equipment department", example = "ICT")
+    private User.UserDepartment department;
 
     @NotBlank(message = "Mobile number is required")
     @Size(max = 20, message = "Mobile number must not exceed 20 characters")
