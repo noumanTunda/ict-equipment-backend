@@ -1,6 +1,5 @@
 package com.tundalabs.ictequipment.dto;
 
-import com.tundalabs.ictequipment.entity.Equipment;
 import com.tundalabs.ictequipment.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
