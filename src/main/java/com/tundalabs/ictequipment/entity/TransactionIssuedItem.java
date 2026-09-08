@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "transaction_issued_items")
@@ -28,8 +29,10 @@ public class TransactionIssuedItem {
     @JoinColumn(name = "equipment_id", nullable = false)
     private Equipment equipment;
 
-    @Column(name = "accessories_provided", length = 500)
-    private String accessoriesProvided;
+    @ElementCollection
+    @CollectionTable(name = "transaction_issued_item_accessories", joinColumns = @JoinColumn(name = "issued_item_id"))
+    @Column(name = "accessory")
+    private List<String> accessoriesProvided;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

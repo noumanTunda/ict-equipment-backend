@@ -2,6 +2,7 @@ package com.tundalabs.ictequipment.service;
 
 import com.tundalabs.ictequipment.dto.EquipmentRequestDto;
 import com.tundalabs.ictequipment.dto.EquipmentResponseDto;
+import com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -22,4 +23,8 @@ public interface EquipmentService {
     EquipmentResponseDto updateEquipment(Long id, EquipmentRequestDto request);
 
     void deleteEquipment(Long id);
+
+    List<EquipmentSearchResponseDto> searchEquipment(String status, String query);
+
+    List<EquipmentResponseDto> getMyIssuedItems();
 }

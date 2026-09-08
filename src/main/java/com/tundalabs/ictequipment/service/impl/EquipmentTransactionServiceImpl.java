@@ -461,7 +461,8 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Equipment status will be updated to ISSUED when transaction is completed(9signatures submitted)
+            equipment.setAssignedUserId(transaction.getStaffId());
+            equipmentRepository.save(equipment);
 
             TransactionIssuedItem issuedItem = TransactionIssuedItem.builder()
                     .transaction(transaction)
@@ -485,7 +486,15 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Equipment status will be updated to RETURNED when transaction is completed (signatures submitted)
+            // Validate equipment belongs to the requesting staff member
+            if (!equipment.getAssignedUserId().equals(transaction.getStaffId())) {
+                throw new IllegalArgumentException(
+                        "Equipment " + itemDto.getAssetNumber() + " is not assigned to the requesting staff member"
+                );
+            }
+
+            equipment.setAssignedUserId(null);
+            equipmentRepository.save(equipment);
 
             TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
                     .transaction(transaction)

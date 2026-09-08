@@ -2,14 +2,18 @@ package com.tundalabs.ictequipment.service.impl;
 
 import com.tundalabs.ictequipment.dto.EquipmentRequestDto;
 import com.tundalabs.ictequipment.dto.EquipmentResponseDto;
+import com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto;
 import com.tundalabs.ictequipment.entity.Equipment;
 import com.tundalabs.ictequipment.exception.ResourceNotFoundException;
 import com.tundalabs.ictequipment.repository.EquipmentRepository;
+import com.tundalabs.ictequipment.repository.UserRepository;
 import com.tundalabs.ictequipment.service.EquipmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 public class EquipmentServiceImpl implements EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -147,6 +152,52 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .description(equipment.getDescription())
                 .createdAt(equipment.getCreatedAt())
                 .updatedAt(equipment.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    public List<EquipmentSearchResponseDto> searchEquipment(String status, String query) {
+        log.info("Searching equipment with status: {} and query: {}", status, query);
+
+        Equipment.EquipmentStatus equipmentStatus = Equipment.EquipmentStatus.valueOf(status.toUpperCase());
+
+        List<Equipment> equipmentList;
+        if (query == null || query.trim().isEmpty()) {
+            equipmentList = equipmentRepository.findByStatus(equipmentStatus);
+        } else {
+            equipmentList = equipmentRepository.searchByStatusAndQuery(equipmentStatus, query);
+        }
+
+        return equipmentList.stream()
+                .map(this::mapToSearchResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<EquipmentResponseDto> getMyIssuedItems() {
+        log.info("Fetching issued items for current user");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String employeeId = authentication.getName();
+
+        com.tundalabs.ictequipment.entity.User currentUser = userRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with employee ID: " + employeeId));
+
+        List<Equipment> equipmentList = equipmentRepository.findByStatusAndAssignedUserId(
+                Equipment.EquipmentStatus.ISSUED, currentUser.getId());
+
+        return equipmentList.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    private EquipmentSearchResponseDto mapToSearchResponseDto(Equipment equipment) {
+        return EquipmentSearchResponseDto.builder()
+                .id(equipment.getId())
+                .assetNumber(equipment.getAssetNumber())
+                .serialNumber(equipment.getSerialNumber())
+                .equipmentType(equipment.getEquipmentType())
+                .status(equipment.getStatus())
                 .build();
     }
 }

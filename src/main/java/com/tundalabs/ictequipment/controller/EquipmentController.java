@@ -140,4 +140,32 @@ public class EquipmentController {
         equipmentService.deleteEquipment(id);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Equipment deleted successfully"));
     }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ICT_OFFICER')")
+    @Operation(summary = "Search equipment by status and query", description = "Searches for equipment by status and query term (name, asset number, or serial number). Requires ADMIN or ICT_OFFICER role.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Equipment retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<java.util.List<com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto>>> searchEquipment(
+            @Parameter(description = "Filter by equipment status") @RequestParam(defaultValue = "AVAILABLE") String status,
+            @Parameter(description = "Search query term") @RequestParam(required = false) String query) {
+        log.info("Searching equipment with status: {} and query: {}", status, query);
+        java.util.List<com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto> response = equipmentService.searchEquipment(status, query);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Equipment retrieved successfully", response));
+    }
+
+    @GetMapping("/my-issued-items")
+    @Operation(summary = "Get currently issued items for authenticated user", description = "Retrieves all equipment currently issued to the authenticated user. Available to all roles.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Issued items retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<java.util.List<EquipmentResponseDto>>> getMyIssuedItems() {
+        log.info("Fetching issued items for current user");
+        java.util.List<EquipmentResponseDto> response = equipmentService.getMyIssuedItems();
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Issued items retrieved successfully", response));
+    }
 }

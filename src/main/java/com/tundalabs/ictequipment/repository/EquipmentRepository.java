@@ -28,4 +28,10 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
     @Query("SELECT e FROM Equipment e WHERE e.assetNumber IN :assetNumbers")
     List<Equipment> findByAssetNumbers(@Param("assetNumbers") List<String> assetNumbers);
+
+    @Query("SELECT e FROM Equipment e WHERE e.status = :status AND (LOWER(e.equipmentType) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(e.assetNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(e.serialNumber) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<Equipment> searchByStatusAndQuery(@Param("status") EquipmentStatus status, @Param("query") String query);
+
+    @Query("SELECT e FROM Equipment e WHERE e.status = :status AND e.assignedUserId = :userId")
+    List<Equipment> findByStatusAndAssignedUserId(@Param("status") EquipmentStatus status, @Param("userId") Long userId);
 }

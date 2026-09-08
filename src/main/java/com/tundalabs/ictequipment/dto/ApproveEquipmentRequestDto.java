@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,8 +31,8 @@ public class ApproveEquipmentRequestDto {
     @Schema(description = "ICT configuration checklist for the equipment (required for ISSUE and EXCHANGE requests)")
     private IctChecklistRequestDto checklist;
 
-    @Schema(description = "Accessories provided with issued equipment", example = "Charger, Mouse, Bag")
-    private String accessoriesProvided;
+    @Schema(description = "Accessories provided with issued equipment")
+    private List<String> accessoriesProvided;
 
     @Schema(description = "Condition of returned equipment", example = "Good working condition")
     private String returnCondition;
