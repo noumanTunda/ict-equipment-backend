@@ -24,7 +24,7 @@ public class EquipmentRequestDto {
 
     @NotBlank(message = "Serial number is required")
     @Size(max = 100, message = "Serial number must not exceed 100 characters")
-    @Schema(description = "Unique serial number", example = "SN123456789")
+    @Schema(description = "Unique serial number", example = "SN 123456789")
     private String serialNumber;
 
     @NotBlank(message = "Equipment type is required")
@@ -44,6 +44,10 @@ public class EquipmentRequestDto {
     @NotNull(message = "Status is required")
     @Schema(description = "Equipment status", example = "AVAILABLE")
     private Equipment.EquipmentStatus status;
+
+    @NotNull(message = "Equipment must belong to a Department")
+    @Schema(description = "Equipment department", example = "ICT")
+    private Equipment.EquipmentDepartment department;
 
     @Size(max = 255, message = "Description must not exceed 255 characters")
     @Schema(description = "Equipment description", example = "Dell Latitude 5420")
