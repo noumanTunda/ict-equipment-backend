@@ -28,6 +28,9 @@ public class EquipmentResponseDto {
     @Schema(description = "Type of equipment", example = "Laptop")
     private String equipmentType;
 
+    @Schema(description = "Equipment's Department", example = "ICT")
+    private Equipment.EquipmentDepartment department;
+
     @Schema(description = "Supplier of equipment", example = "Supplier Name")
     private String supplierDetails;
 
