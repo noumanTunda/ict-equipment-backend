@@ -60,6 +60,14 @@ public class Equipment {
         MAINTENANCE
     }
 
+    public enum EquipmentDepartment {
+        ICT,
+        FINANCE_AND_ACCOUNTS,
+        LEGAL_SERVICES,
+        HUMAN_RESOURCE_AND_ADMINISTRATION,
+        PLANNING_AND_COORDINATION
+    }
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
