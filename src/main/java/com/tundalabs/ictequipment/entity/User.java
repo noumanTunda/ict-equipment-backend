@@ -35,8 +35,9 @@ public class User implements UserDetails {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "department", nullable = false, length = 80)
-    private String department;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "department", nullable = false)
+    private UserDepartment department;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 80)
@@ -69,6 +70,14 @@ public class User implements UserDetails {
         suspended,
         inactive,
         pending
+    }
+
+    public enum UserDepartment{
+        ICT,
+        FINANCE_AND_ACCOUNTS,
+        LEGAL_SERVICES,
+        HUMAN_RESOURCE_AND_ADMINISTRATION,
+        PLANNING_AND_COORDINATION
     }
 
     @PrePersist
@@ -118,7 +127,7 @@ public class User implements UserDetails {
                 .employeeId(employeeId)
                 .fullName(fullName)
                 .email(email)
-                .department(department)
+                .department(department.name())
                 .role(role.name())
                 .status(status.name())
                 .build();
