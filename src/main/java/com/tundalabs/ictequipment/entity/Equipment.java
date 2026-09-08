@@ -30,6 +30,10 @@ public class Equipment {
     private String equipmentType;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "department", nullable = false, length = 50)
+    private EquipmentDepartment department;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private EquipmentStatus status;
 
