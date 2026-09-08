@@ -41,6 +41,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .serialNumber(request.getSerialNumber())
                 .equipmentType(request.getEquipmentType())
                 .brandModel(request.getBrandModel())
+                .department(request.getDepartment())
                 .supplierDetails(request.getSupplierDetails())
                 .status(request.getStatus())
                 .description(request.getDescription())
@@ -105,6 +106,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         equipment.setAssetNumber(request.getAssetNumber());
         equipment.setSerialNumber(request.getSerialNumber());
         equipment.setEquipmentType(request.getEquipmentType());
+        equipment.setDepartment(request.getDepartment());
         equipment.setBrandModel(request.getBrandModel());
         equipment.setSupplierDetails(request.getSupplierDetails());
         equipment.setStatus(request.getStatus());
@@ -138,6 +140,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .assetNumber(equipment.getAssetNumber())
                 .serialNumber(equipment.getSerialNumber())
                 .equipmentType(equipment.getEquipmentType())
+                .department(equipment.getDepartment())
                 .brandModel(equipment.getBrandModel())
                 .supplierDetails(equipment.getSupplierDetails())
                 .status(equipment.getStatus())
