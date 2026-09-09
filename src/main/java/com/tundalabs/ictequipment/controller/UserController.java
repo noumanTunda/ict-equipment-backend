@@ -28,7 +28,7 @@ public class UserController {
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ICT_OFFICER')")
-    @Operation(summary = "Search active users", description = "Searches for active staff members by full name or employee ID. Requires ADMIN or ICT_OFFICER role.")
+    @Operation(summary = "Search active users", description = "Searches for active staff members by email, full name or employee ID. Requires ADMIN or ICT_OFFICER role.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
