@@ -444,6 +444,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 .reason(request.getReason())
                 .status(request.getStatus())
                 .rejectionReason(request.getRejectionReason())
+                .preferredEquipmentType(request.getPreferredEquipmentType())
                 .approvedBy(request.getApprovedBy())
                 .approvedByName(approvedByName)
                 .approvedAt(request.getApprovedAt())
