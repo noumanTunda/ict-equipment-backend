@@ -461,7 +461,6 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            equipment.setAssignedUserId(transaction.getStaffId());
             equipmentRepository.save(equipment);
 
             TransactionIssuedItem issuedItem = TransactionIssuedItem.builder()
@@ -486,14 +485,6 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 );
             }
 
-            // Validate equipment belongs to the requesting staff member
-            if (!equipment.getAssignedUserId().equals(transaction.getStaffId())) {
-                throw new IllegalArgumentException(
-                        "Equipment " + itemDto.getAssetNumber() + " is not assigned to the requesting staff member"
-                );
-            }
-
-            equipment.setAssignedUserId(null);
             equipmentRepository.save(equipment);
 
             TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
