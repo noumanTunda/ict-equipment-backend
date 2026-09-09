@@ -20,6 +20,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     boolean existsByEmail(String email);
 
-    @Query("SELECT u FROM User u WHERE u.status = com.tundalabs.ictequipment.entity.User.UserStatus.active AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.employeeId) LIKE LOWER(CONCAT('%', :query, '%')))")
+//    @Query("SELECT u FROM User u WHERE u.status = com.tundalabs.ictequipment.entity.User.UserStatus.active AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.employeeId) LIKE LOWER(CONCAT('%', :query, '%')))")
+//    List<User> searchActiveUsers(@Param("query") String query);
+
+    @Query("SELECT u FROM User u WHERE u.status = com.tundalabs.ictequipment.entity.User.UserStatus.active " +
+            "AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(u.employeeId) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<User> searchActiveUsers(@Param("query") String query);
 }
