@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,5 +14,5 @@ public class IssuedItemResponseDto {
     private String assetNumber;
     private String serialNumber;
     private String equipmentType;
-    private List<String> accessoriesProvided;
+    private String accessoriesProvided;
 }
