@@ -29,10 +29,8 @@ public class TransactionIssuedItem {
     @JoinColumn(name = "equipment_id", nullable = false)
     private Equipment equipment;
 
-    @ElementCollection
-    @CollectionTable(name = "transaction_issued_item_accessories", joinColumns = @JoinColumn(name = "issued_item_id"))
-    @Column(name = "accessory")
-    private List<String> accessoriesProvided;
+    @Column(name = "accessories_provided")
+    private String accessoriesProvided;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
