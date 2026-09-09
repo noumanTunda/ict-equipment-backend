@@ -46,9 +46,6 @@ public class Equipment {
     @Column(name = "supplier_details", length = 255)
     private String supplierDetails;
 
-    @Column(name = "assigned_user_id")
-    private Long assignedUserId;
-
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
