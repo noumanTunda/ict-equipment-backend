@@ -4,8 +4,10 @@ import com.tundalabs.ictequipment.dto.EquipmentRequestDto;
 import com.tundalabs.ictequipment.dto.EquipmentResponseDto;
 import com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto;
 import com.tundalabs.ictequipment.entity.Equipment;
+import com.tundalabs.ictequipment.entity.TransactionIssuedItem;
 import com.tundalabs.ictequipment.exception.ResourceNotFoundException;
 import com.tundalabs.ictequipment.repository.EquipmentRepository;
+import com.tundalabs.ictequipment.repository.TransactionIssuedItemRepository;
 import com.tundalabs.ictequipment.repository.UserRepository;
 import com.tundalabs.ictequipment.service.EquipmentService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class EquipmentServiceImpl implements EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
+    private final TransactionIssuedItemRepository transactionIssuedItemRepository;
 
     @Override
     @Transactional
@@ -183,11 +186,10 @@ public class EquipmentServiceImpl implements EquipmentService {
         com.tundalabs.ictequipment.entity.User currentUser = userRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with employee ID: " + employeeId));
 
-        List<Equipment> equipmentList = equipmentRepository.findByStatusAndAssignedUserId(
-                Equipment.EquipmentStatus.ISSUED, currentUser.getId());
+        List<TransactionIssuedItem> issuedItems = transactionIssuedItemRepository.findByStaffIdAndCompletedTransaction(currentUser.getId());
 
-        return equipmentList.stream()
-                .map(this::mapToResponseDto)
+        return issuedItems.stream()
+                .map(item -> mapToResponseDto(item.getEquipment()))
                 .collect(Collectors.toList());
     }
 
