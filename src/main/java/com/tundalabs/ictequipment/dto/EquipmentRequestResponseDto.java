@@ -46,6 +46,9 @@ public class EquipmentRequestResponseDto {
     @Schema(description = "Name of officer who approved the request")
     private String approvedByName;
 
+    @Schema(description = "Preferred equipment type (for ISSUE or EXCHANGE requests)", example = "LAPTOP")
+    private String preferredEquipmentType;
+
     @Schema(description = "Approval timestamp")
     private LocalDateTime approvedAt;
 
