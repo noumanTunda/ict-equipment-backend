@@ -98,14 +98,16 @@ public class EquipmentTransactionController {
     })
     public ResponseEntity<ApiResponse<Page<TransactionResponseDto>>> getTransactions(
             @Parameter(description = "Filter by staff ID") @RequestParam(required = false) Long staffId,
+            @Parameter(description = "Filter by Transaction Code") @RequestParam(required = false) String transactionCode,
             @Parameter(description = "Filter by status (DRAFT, PENDING_SIGNATURE, COMPLETED, CANCELLED)") @RequestParam(required = false) String status,
             @Parameter(description = "Filter by start date") @RequestParam(required = false) String startDate,
             @Parameter(description = "Filter by end date") @RequestParam(required = false) String endDate,
             Pageable pageable) {
-        log.info("Fetching transactions with filters - staffId: {}, status: {}", staffId, status);
+        log.info("Fetching transactions with filters - staffId: {}, status: {}, transactionCode:{}", staffId, status, transactionCode);
 
         TransactionFilterParams filters = TransactionFilterParams.builder()
                 .staffId(staffId)
+                .transactionCode(transactionCode)
                 .status(status != null ? EquipmentTransaction.TransactionStatus.valueOf(status) : null)
                 .startDate(null)
                 .endDate(null)
