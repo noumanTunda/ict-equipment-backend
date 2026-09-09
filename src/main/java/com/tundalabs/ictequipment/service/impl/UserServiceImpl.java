@@ -39,6 +39,7 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .employeeId(user.getEmployeeId())
                 .fullName(user.getFullName())
+                .email(user.getEmail())
                 .build();
     }
 }
