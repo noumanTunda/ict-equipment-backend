@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class TransactionFilterParams {
     private Long staffId;
+    private String transactionCode;
     private TransactionStatus status;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
