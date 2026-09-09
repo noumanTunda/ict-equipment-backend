@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,5 +16,5 @@ public class IssuedItemRequestDto {
     @Size(max = 50, message = "Asset number must not exceed 50 characters")
     private String assetNumber;
 
-    private List<String> accessoriesProvided;
+    private String accessoriesProvided;
 }
