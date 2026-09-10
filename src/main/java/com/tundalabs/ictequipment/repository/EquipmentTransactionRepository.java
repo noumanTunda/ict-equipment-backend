@@ -31,6 +31,15 @@ public interface EquipmentTransactionRepository extends JpaRepository<EquipmentT
            "LEFT JOIN FETCH t.returnedItems ri " +
            "LEFT JOIN FETCH ri.equipment " +
            "LEFT JOIN FETCH t.checklist " +
+           "WHERE t.id = :id")
+    Optional<EquipmentTransaction> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("SELECT t FROM EquipmentTransaction t " +
+           "LEFT JOIN FETCH t.issuedItems ii " +
+           "LEFT JOIN FETCH ii.equipment " +
+           "LEFT JOIN FETCH t.returnedItems ri " +
+           "LEFT JOIN FETCH ri.equipment " +
+           "LEFT JOIN FETCH t.checklist " +
            "WHERE t.staffId = :staffId")
     List<EquipmentTransaction> findByStaffId(@Param("staffId") Long staffId);
 
