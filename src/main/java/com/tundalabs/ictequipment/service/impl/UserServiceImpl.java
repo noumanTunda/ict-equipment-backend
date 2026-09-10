@@ -38,6 +38,7 @@ public class UserServiceImpl implements UserService {
         return UserSearchResponseDto.builder()
                 .id(user.getId())
                 .employeeId(user.getEmployeeId())
+                .department(user.getDepartment().name())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .build();
