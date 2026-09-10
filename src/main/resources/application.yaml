@@ -11,10 +11,19 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: validate
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: false
+
+  data:
+    web:
+      pageable:
+        page-serialization-mode: via-dto
+
+  cache:
+    type: simple
+    cache-names: users
 
   mail:
     host: ${MAIL_HOST}
