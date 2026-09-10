@@ -129,7 +129,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
 
     @Override
     public TransactionResponseDto getTransactionById(Long id) {
-        EquipmentTransaction transaction = transactionRepository.findById(id)
+        EquipmentTransaction transaction = transactionRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
 
         User staff = userRepository.findById(transaction.getStaffId())
@@ -189,7 +189,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
     public TransactionResponseDto submitSignatures(Long transactionId, SubmitSignatureRequestDto request) {
         log.info("Submitting signatures for transaction ID: {}", transactionId);
 
-        EquipmentTransaction transaction = transactionRepository.findById(transactionId)
+        EquipmentTransaction transaction = transactionRepository.findByIdWithDetails(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
 
         // Validate transaction is in PENDING_SIGNATURE status
@@ -265,7 +265,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
     public TransactionResponseDto cancelTransaction(Long transactionId) {
         log.info("Cancelling transaction ID: {}", transactionId);
 
-        EquipmentTransaction transaction = transactionRepository.findById(transactionId)
+        EquipmentTransaction transaction = transactionRepository.findByIdWithDetails(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
 
         // Validate transaction is in PENDING_SIGNATURE status
@@ -294,7 +294,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
 
     @Override
     public byte[] generateTransactionPdf(Long transactionId) {
-        EquipmentTransaction transaction = transactionRepository.findById(transactionId)
+        EquipmentTransaction transaction = transactionRepository.findByIdWithDetails(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
 
         User staff = userRepository.findById(transaction.getStaffId())
