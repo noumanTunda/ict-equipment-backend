@@ -22,6 +22,9 @@ public class UserSearchResponseDto {
     @Schema(description = "Full name of the user", example = "John Doe")
     private String fullName;
 
+    @Schema(description = "Department of the user", example = "ICT")
+    private String department;
+
     @Schema(description = "Email of the user", example = "john.doe@example.com")
     private String email;
 }
