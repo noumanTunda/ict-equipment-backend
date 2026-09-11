@@ -45,8 +45,8 @@ jwt:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
-    max-age: ${CORS_MAX_AGE:3600}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    max-age: ${CORS_MAX_AGE}
 
   frontend:
-    reset-password-url: "http://localhost:4200/reset-password"
+    reset-password-url: ${FRONTEND_RESET_PASSWORD_URL}
