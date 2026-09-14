@@ -1,10 +1,7 @@
 package com.tundalabs.ictequipment.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -22,6 +19,8 @@ public class IctChecklist {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id", unique = true, nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private EquipmentTransaction transaction;
 
     @Column(name = "os_installed", length = 100)
