@@ -37,19 +37,11 @@ public class EquipmentTransaction {
     @Column(name = "status", nullable = false, length = 30)
     private TransactionStatus status;
 
-    @Lob
-    @Column(name = "employee_signature", columnDefinition = "LONGTEXT")
-    private String employeeSignature;
+    @Column(name = "employee_signed")
+    private Boolean employeeSigned;
 
-    @Lob
-    @Column(name = "officer_signature", columnDefinition = "LONGTEXT")
-    private String officerSignature;
-
-    @Column(name = "employee_signed_at")
-    private LocalDateTime employeeSignedAt;
-
-    @Column(name = "officer_signed_at")
-    private LocalDateTime officerSignedAt;
+    @Column(name = "officer_signed")
+    private Boolean officerSigned;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
