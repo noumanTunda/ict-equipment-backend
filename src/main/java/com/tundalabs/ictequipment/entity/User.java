@@ -35,6 +35,9 @@ public class User implements UserDetails {
     @Column(name = "password", nullable = false)
     private String password;
 
+    @Column(name = "keyphrase", length = 255)
+    private String keyphrase;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "department", nullable = false)
     private UserDepartment department;
