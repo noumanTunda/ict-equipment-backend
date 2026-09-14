@@ -117,19 +117,39 @@ public class EquipmentTransactionController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Transactions retrieved successfully", response));
     }
 
-    @PostMapping("/{id}/sign")
-    @Operation(summary = "Submit signatures for transaction", description = "Submits employee and officer signatures to complete a transaction")
+    @PostMapping("/{id}/sign/employee")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Sign transaction as employee", description = "Employee signs the transaction using a keyphrase. The keyphrase is hashed and stored securely.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Signatures submitted successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid signature data or transaction state"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Transaction not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Transaction signed successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid keyphrase or transaction state"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Transaction not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    public ResponseEntity<ApiResponse<TransactionResponseDto>> submitSignatures(
+    public ResponseEntity<ApiResponse<TransactionResponseDto>> signAsEmployee(
             @Parameter(description = "Transaction ID") @PathVariable Long id,
-            @Valid @RequestBody SubmitSignatureRequestDto request) {
-        log.info("Submitting signatures for transaction ID: {}", id);
-        TransactionResponseDto response = transactionService.submitSignatures(id, request);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Signatures submitted successfully", response));
+            @Valid @RequestBody SignTransactionDto request) {
+        log.info("Employee signing transaction ID: {}", id);
+        TransactionResponseDto response = transactionService.signTransactionAsEmployee(id, request);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Transaction signed successfully", response));
+    }
+
+    @PostMapping("/{id}/sign/officer")
+    @PreAuthorize("hasAnyAuthority('ROLE_ICT_OFFICER', 'ROLE_ADMIN')")
+    @Operation(summary = "Sign transaction as officer", description = "ICT Officer signs the transaction using a keyphrase. The keyphrase is hashed and stored securely.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Transaction signed successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid keyphrase or transaction state"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Transaction not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<TransactionResponseDto>> signAsOfficer(
+            @Parameter(description = "Transaction ID") @PathVariable Long id,
+            @Valid @RequestBody SignTransactionDto request) {
+        log.info("Officer signing transaction ID: {}", id);
+        TransactionResponseDto response = transactionService.signTransactionAsOfficer(id, request);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Transaction signed successfully", response));
     }
 
     @PostMapping("/{id}/cancel")
