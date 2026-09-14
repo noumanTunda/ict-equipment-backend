@@ -33,11 +33,11 @@ public class EquipmentRequest {
     @Column(name = "reason", length = 500)
     private String reason;
 
-    @Column(name = "return_asset_number", length = 50)
-    private String returnAssetNumber;
+//    @Column(name = "return_asset_number", length = 50)
+//    private String returnAssetNumber;
 
-    @Column(name = "issue_asset_number", length = 50)
-    private String issueAssetNumber;
+//    @Column(name = "issue_asset_number", length = 50)
+//    private String issueAssetNumber;
 
     @Column(name = "preferred_equipment_type", length = 100)
     private String preferredEquipmentType;

@@ -85,8 +85,8 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 .staffId(staffId)
                 .requestType(request.getRequestType())
                 .reason(request.getReason())
-                .returnAssetNumber(request.getReturnAssetNumber())
-                .issueAssetNumber(request.getIssueAssetNumber())
+//                .returnAssetNumber(request.getReturnAssetNumber())
+//                .issueAssetNumber(request.getIssueAssetNumber())
                 .preferredEquipmentType(request.getPreferredEquipmentType())
                 .status(EquipmentRequest.RequestStatus.PENDING)
                 .build();
@@ -303,10 +303,15 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
         transaction = transactionRepository.save(transaction);
 
         // Get asset numbers from request (staff's preferredEquipment)
-        String issueAssetNum = approvalRequest.getIssueAssetNumber() != null ? 
-                approvalRequest.getIssueAssetNumber() : equipmentRequest.getIssueAssetNumber();
-        String returnAssetNum = approvalRequest.getReturnAssetNumber() != null ? 
-                approvalRequest.getReturnAssetNumber() : equipmentRequest.getReturnAssetNumber();
+//        String issueAssetNum = approvalRequest.getIssueAssetNumber() != null ?
+//                approvalRequest.getIssueAssetNumber() : equipmentRequest.getIssueAssetNumber();
+//        String returnAssetNum = approvalRequest.getReturnAssetNumber() != null ?
+//                approvalRequest.getReturnAssetNumber() : equipmentRequest.getReturnAssetNumber();
+
+        String issueAssetNum = approvalRequest.getIssueAssetNumber();
+
+        String returnAssetNum = approvalRequest.getReturnAssetNumber();
+
 
         // Process based on request type
         if (equipmentRequest.getRequestType() == EquipmentRequest.RequestType.ISSUE) {
