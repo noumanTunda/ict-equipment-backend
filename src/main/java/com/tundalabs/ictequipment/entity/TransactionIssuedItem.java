@@ -1,10 +1,7 @@
 package com.tundalabs.ictequipment.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -22,10 +19,14 @@ public class TransactionIssuedItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private EquipmentTransaction transaction;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Equipment equipment;
 
     @Column(name = "accessories_provided")
