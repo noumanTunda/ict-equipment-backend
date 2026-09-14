@@ -186,8 +186,58 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
 
     @Override
     @Transactional
-    public TransactionResponseDto submitSignatures(Long transactionId, SubmitSignatureRequestDto request) {
-        log.info("Submitting signatures for transaction ID: {}", transactionId);
+    public TransactionResponseDto signTransactionAsEmployee(Long transactionId, SignTransactionDto request) {
+        log.info("Employee signing transaction ID: {}", transactionId);
+
+        EquipmentTransaction transaction = transactionRepository.findByIdWithDetails(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
+
+        // Validate transaction is in PENDING_SIGNATURE status
+        if (transaction.getStatus() != EquipmentTransaction.TransactionStatus.PENDING_SIGNATURE) {
+            throw new InvalidTransactionStateException(
+                    "Transaction must be in PENDING_SIGNATURE status to sign. Current status: " + transaction.getStatus()
+            );
+        }
+
+        // Check if employee has already signed
+        if (transaction.getEmployeeSigned() != null && transaction.getEmployeeSigned()) {
+            throw new InvalidTransactionStateException("Employee has already signed this transaction");
+        }
+
+        // Get the staff user and validate keyphrase
+        User staff = userRepository.findById(transaction.getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff member not found"));
+
+        if (staff.getKeyphrase() == null) {
+            throw new InvalidTransactionStateException("Staff member has not set a keyphrase. Please set a keyphrase first.");
+        }
+
+        // Validate the provided keyphrase against the stored hash
+        if (!passwordEncoder.matches(request.getKeyphrase(), staff.getKeyphrase())) {
+            throw new InvalidTransactionStateException("Invalid keyphrase. Please check your keyphrase and try again.");
+        }
+
+        // Mark as signed
+        transaction.setEmployeeSigned(true);
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Employee signed transaction ID: {} successfully", transactionId);
+
+        // Check if both parties have signed - if so, complete the transaction
+        if (transaction.getEmployeeSigned() && transaction.getOfficerSigned()) {
+            completeTransaction(transaction);
+        }
+
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    @Override
+    @Transactional
+    public TransactionResponseDto signTransactionAsOfficer(Long transactionId, SignTransactionDto request) {
+        log.info("Officer signing transaction ID: {}", transactionId);
 
         EquipmentTransaction transaction = transactionRepository.findByIdWithDetails(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + transactionId));
