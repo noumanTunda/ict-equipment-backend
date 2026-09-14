@@ -55,7 +55,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 request.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) {
                 if (returnEquipment.getStatus() != Equipment.EquipmentStatus.ISSUED) {
                     throw new EquipmentUnavailableException(
-                            "Equipment " + request.getReturnAssetNumber() + " is not in ISSUED status. Current status: " + returnEquipment.getStatus()
+                            "Equipment " + request.getReturnAssetNumber() + " is not in ISSUED to You. Current status: " + returnEquipment.getStatus()
                     );
                 }
             }
@@ -70,7 +70,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 request.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) {
                 if (issueEquipment.getStatus() != Equipment.EquipmentStatus.AVAILABLE) {
                     throw new EquipmentUnavailableException(
-                            "Equipment " + request.getIssueAssetNumber() + " is not available. Current status: " + issueEquipment.getStatus()
+                            "Equipment " + request.getIssueAssetNumber() + " is not available for Issue. Current status: " + issueEquipment.getStatus()
                     );
                 }
             }
@@ -302,7 +302,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
 
         transaction = transactionRepository.save(transaction);
 
-        // Get asset numbers from approval request (officer's choice) or fall back to request (staff's preference)
+        // Get asset numbers from request (staff's preferredEquipment)
         String issueAssetNum = approvalRequest.getIssueAssetNumber() != null ? 
                 approvalRequest.getIssueAssetNumber() : equipmentRequest.getIssueAssetNumber();
         String returnAssetNum = approvalRequest.getReturnAssetNumber() != null ? 
