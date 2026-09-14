@@ -469,10 +469,8 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 .issuingOfficerId(transaction.getIssuingOfficerId())
                 .issuingOfficerName(officerName)
                 .status(transaction.getStatus().name())
-                .employeeSignature(transaction.getEmployeeSignature())
-                .officerSignature(transaction.getOfficerSignature())
-                .employeeSignedAt(transaction.getEmployeeSignedAt())
-                .officerSignedAt(transaction.getOfficerSignedAt())
+                .employeeSigned(transaction.getEmployeeSigned() != null ? transaction.getEmployeeSigned() : false)
+                .officerSigned(transaction.getOfficerSigned() != null ? transaction.getOfficerSigned() : false)
                 .createdAt(transaction.getCreatedAt())
                 .updatedAt(transaction.getUpdatedAt())
                 .build();
