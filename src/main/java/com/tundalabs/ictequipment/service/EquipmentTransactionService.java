@@ -16,7 +16,9 @@ public interface EquipmentTransactionService {
 
     Page<TransactionResponseDto> getTransactions(TransactionFilterParams filters, Pageable pageable);
 
-    TransactionResponseDto submitSignatures(Long transactionId, SubmitSignatureRequestDto request);
+    TransactionResponseDto signTransactionAsEmployee(Long transactionId, SignTransactionDto request);
+
+    TransactionResponseDto signTransactionAsOfficer(Long transactionId, SignTransactionDto request);
 
     TransactionResponseDto cancelTransaction(Long transactionId);
 
