@@ -37,6 +37,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
     private final TransactionReturnedItemRepository returnedItemRepository;
     private final IctChecklistRepository checklistRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -268,11 +269,15 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             throw new InvalidTransactionStateException("Invalid keyphrase. Please check your keyphrase and try again.");
         }
 
-        // Update employee signature if provided
-        if (request.getEmployeeSignature() != null && !request.getEmployeeSignature().isEmpty()) {
-            transaction.setEmployeeSignature(request.getEmployeeSignature());
-            transaction.setEmployeeSignedAt(LocalDateTime.now());
-            log.info("Employee signature submitted for transaction ID: {}", transactionId);
+        // Mark as signed
+        transaction.setOfficerSigned(true);
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Officer signed transaction ID: {} successfully", transactionId);
+
+        // Check if both parties have signed - if so, complete the transaction
+        if (transaction.getEmployeeSigned() && transaction.getOfficerSigned()) {
+            completeTransaction(transaction);
         }
 
         // Update officer signature if provided
