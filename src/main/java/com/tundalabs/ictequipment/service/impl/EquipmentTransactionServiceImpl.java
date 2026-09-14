@@ -250,10 +250,22 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             );
         }
 
-        // Validate at least one signature is provided
-        if ((request.getEmployeeSignature() == null || request.getEmployeeSignature().isEmpty()) &&
-            (request.getOfficerSignature() == null || request.getOfficerSignature().isEmpty())) {
-            throw new RuntimeException("At least one signature is required");
+        // Check if officer has already signed
+        if (transaction.getOfficerSigned() != null && transaction.getOfficerSigned()) {
+            throw new InvalidTransactionStateException("Officer has already signed this transaction");
+        }
+
+        // Get the officer user and validate keyphrase
+        User officer = userRepository.findById(transaction.getIssuingOfficerId())
+                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
+
+        if (officer.getKeyphrase() == null) {
+            throw new InvalidTransactionStateException("Officer has not set a keyphrase. Please set a keyphrase first.");
+        }
+
+        // Validate the provided keyphrase against the stored hash
+        if (!passwordEncoder.matches(request.getKeyphrase(), officer.getKeyphrase())) {
+            throw new InvalidTransactionStateException("Invalid keyphrase. Please check your keyphrase and try again.");
         }
 
         // Update employee signature if provided
