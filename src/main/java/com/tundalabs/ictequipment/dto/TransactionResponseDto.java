@@ -35,19 +35,13 @@ public class TransactionResponseDto {
     
     @Schema(description = "Transaction status", example = "COMPLETED")
     private String status;
-    
-    @Schema(description = "Employee signature (base64 encoded)")
-    private String employeeSignature;
-    
-    @Schema(description = "Officer signature (base64 encoded)")
-    private String officerSignature;
-    
-    @Schema(description = "Employee signature timestamp")
-    private LocalDateTime employeeSignedAt;
-    
-    @Schema(description = "Officer signature timestamp")
-    private LocalDateTime officerSignedAt;
-    
+
+    @Schema(description = "Whether employee has signed with keyphrase")
+    private Boolean employeeSigned;
+
+    @Schema(description = "Whether officer has signed with keyphrase")
+    private Boolean officerSigned;
+
     @Schema(description = "Transaction creation timestamp")
     private LocalDateTime createdAt;
     
