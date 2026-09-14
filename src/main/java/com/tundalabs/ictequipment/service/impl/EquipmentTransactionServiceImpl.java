@@ -247,7 +247,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         // Validate transaction is in PENDING_SIGNATURE status
         if (transaction.getStatus() != EquipmentTransaction.TransactionStatus.PENDING_SIGNATURE) {
             throw new InvalidTransactionStateException(
-                    "Transaction must be in PENDING_SIGNATURE status to submit signatures. Current status: " + transaction.getStatus()
+                    "Transaction must be in PENDING_SIGNATURE status to sign. Current status: " + transaction.getStatus()
             );
         }
 
@@ -280,52 +280,41 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             completeTransaction(transaction);
         }
 
-        // Update officer signature if provided
-        if (request.getOfficerSignature() != null && !request.getOfficerSignature().isEmpty()) {
-            transaction.setOfficerSignature(request.getOfficerSignature());
-            transaction.setOfficerSignedAt(LocalDateTime.now());
-            log.info("Officer signature submitted for transaction ID: {}", transactionId);
-        }
-
-        // Check if both signatures are now present - if so, complete the transaction
-        if (transaction.getEmployeeSignature() != null && !transaction.getEmployeeSignature().isEmpty() &&
-            transaction.getOfficerSignature() != null && !transaction.getOfficerSignature().isEmpty()) {
-            
-            // Update equipment statuses now that transaction is being completed
-            if (transaction.getIssuedItems() != null) {
-                transaction.getIssuedItems().forEach(issuedItem -> {
-                    Equipment equipment = issuedItem.getEquipment();
-                    if (equipment.getStatus() == Equipment.EquipmentStatus.AVAILABLE) {
-                        equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
-                        equipmentRepository.save(equipment);
-                        log.info("Updated equipment {} from AVAILABLE to ISSUED", equipment.getAssetNumber());
-                    }
-                });
-            }
-
-            if (transaction.getReturnedItems() != null) {
-                transaction.getReturnedItems().forEach(returnedItem -> {
-                    Equipment equipment = returnedItem.getEquipment();
-                    if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
-                        equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
-                        equipmentRepository.save(equipment);
-                        log.info("Updated equipment {} from ISSUED to RETURNED", equipment.getAssetNumber());
-                    }
-                });
-            }
-
-            transaction.setStatus(EquipmentTransaction.TransactionStatus.COMPLETED);
-            log.info("Transaction completed successfully with ID: {}", transactionId);
-        }
-
-        transaction = transactionRepository.save(transaction);
-
         User staff = userRepository.findById(transaction.getStaffId())
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
-        User officer = userRepository.findById(transaction.getIssuingOfficerId())
-                .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         return mapToResponseDto(transaction, staff.getFullName(), officer.getFullName());
+    }
+
+    private void completeTransaction(EquipmentTransaction transaction) {
+        log.info("Completing transaction ID: {}", transaction.getId());
+
+        // Update equipment statuses
+        if (transaction.getIssuedItems() != null) {
+            transaction.getIssuedItems().forEach(issuedItem -> {
+                Equipment equipment = issuedItem.getEquipment();
+                if (equipment.getStatus() == Equipment.EquipmentStatus.AVAILABLE) {
+                    equipment.setStatus(Equipment.EquipmentStatus.ISSUED);
+                    equipmentRepository.save(equipment);
+                    log.info("Updated equipment {} from AVAILABLE to ISSUED", equipment.getAssetNumber());
+                }
+            });
+        }
+
+        if (transaction.getReturnedItems() != null) {
+            transaction.getReturnedItems().forEach(returnedItem -> {
+                Equipment equipment = returnedItem.getEquipment();
+                if (equipment.getStatus() == Equipment.EquipmentStatus.ISSUED) {
+                    equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
+                    equipmentRepository.save(equipment);
+                    log.info("Updated equipment {} from ISSUED to RETURNED", equipment.getAssetNumber());
+                }
+            });
+        }
+
+        transaction.setStatus(EquipmentTransaction.TransactionStatus.COMPLETED);
+        transactionRepository.save(transaction);
+        log.info("Transaction completed successfully with ID: {}", transaction.getId());
     }
 
     @Override
@@ -455,12 +444,12 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             document.add(Chunk.NEWLINE);
 
             document.add(new Paragraph("PART G - SIGNATURES", headerFont));
-            
+
             // Create 2-column table for signatures
             Table signatureTable = new Table(2);
             signatureTable.setWidths(new float[]{3f, 2f});
             signatureTable.setWidth(100f);
-            
+
             // Employee Signature Row
             Cell employeeMetadataCell = new Cell();
             employeeMetadataCell.setBorder(Rectangle.NO_BORDER);
@@ -468,22 +457,17 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             employeeMetadataCell.add(Chunk.NEWLINE);
             employeeMetadataCell.add(new Phrase("Name: " + staff.getFullName(), normalFont));
             employeeMetadataCell.add(Chunk.NEWLINE);
-            String employeeSignedAt = transaction.getEmployeeSignedAt() != null 
-                ? transaction.getEmployeeSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) 
+            String employeeSignedStatus = transaction.getEmployeeSigned() != null && transaction.getEmployeeSigned()
+                ? "Signed with keyphrase"
                 : "Not signed";
-            employeeMetadataCell.add(new Phrase("Signed At: " + employeeSignedAt, normalFont));
+            employeeMetadataCell.add(new Phrase("Status: " + employeeSignedStatus, normalFont));
             signatureTable.addCell(employeeMetadataCell);
-            
+
             Cell employeeSignatureCell = new Cell();
             employeeSignatureCell.setBorder(Rectangle.NO_BORDER);
-            Image employeeSignatureImage = createSignatureImage(transaction.getEmployeeSignature());
-            if (employeeSignatureImage != null) {
-                employeeSignatureCell.add(employeeSignatureImage);
-            } else {
-                employeeSignatureCell.add(new Phrase("[ No Signature ]", normalFont));
-            }
+            employeeSignatureCell.add(new Phrase(transaction.getEmployeeSigned() != null && transaction.getEmployeeSigned() ? "[ Signed ]" : "[ Not Signed ]", normalFont));
             signatureTable.addCell(employeeSignatureCell);
-            
+
             // Officer Signature Row
             Cell officerMetadataCell = new Cell();
             officerMetadataCell.setBorder(Rectangle.NO_BORDER);
@@ -491,22 +475,17 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             officerMetadataCell.add(Chunk.NEWLINE);
             officerMetadataCell.add(new Phrase("Name: " + officer.getFullName(), normalFont));
             officerMetadataCell.add(Chunk.NEWLINE);
-            String officerSignedAt = transaction.getOfficerSignedAt() != null 
-                ? transaction.getOfficerSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) 
+            String officerSignedStatus = transaction.getOfficerSigned() != null && transaction.getOfficerSigned()
+                ? "Signed with keyphrase"
                 : "Not signed";
-            officerMetadataCell.add(new Phrase("Signed At: " + officerSignedAt, normalFont));
+            officerMetadataCell.add(new Phrase("Status: " + officerSignedStatus, normalFont));
             signatureTable.addCell(officerMetadataCell);
-            
+
             Cell officerSignatureCell = new Cell();
             officerSignatureCell.setBorder(Rectangle.NO_BORDER);
-            Image officerSignatureImage = createSignatureImage(transaction.getOfficerSignature());
-            if (officerSignatureImage != null) {
-                officerSignatureCell.add(officerSignatureImage);
-            } else {
-                officerSignatureCell.add(new Phrase("[ No Signature ]", normalFont));
-            }
+            officerSignatureCell.add(new Phrase(transaction.getOfficerSigned() != null && transaction.getOfficerSigned() ? "[ Signed ]" : "[ Not Signed ]", normalFont));
             signatureTable.addCell(officerSignatureCell);
-            
+
             document.add(signatureTable);
 
             document.close();
@@ -594,37 +573,6 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         return "TXN-" + timestamp + "-" + uuid;
     }
 
-    private Image createSignatureImage(String base64String) {
-        if (base64String == null || base64String.isEmpty()) {
-            return null;
-        }
-
-        try {
-            // Strip data URI header if present
-            String sanitizedBase64 = base64String;
-            if (base64String.startsWith("data:image/")) {
-                int commaIndex = base64String.indexOf(",");
-                if (commaIndex != -1) {
-                    sanitizedBase64 = base64String.substring(commaIndex + 1);
-                }
-            }
-
-            // Decode Base64 to byte array
-            byte[] imageBytes = Base64.getDecoder().decode(sanitizedBase64);
-
-            // Create OpenPDF Image from bytes
-            Image signatureImage = Image.getInstance(imageBytes);
-            
-            // Scale to uniform dimensions
-            signatureImage.scaleToFit(120f, 40f);
-            
-            return signatureImage;
-        } catch (Exception e) {
-            log.error("Error decoding signature image from Base64", e);
-            return null;
-        }
-    }
-
     private TransactionResponseDto mapToResponseDto(EquipmentTransaction transaction, String staffName, String officerName) {
         List<IssuedItemResponseDto> issuedItemDtos = null;
         if (transaction.getIssuedItems() != null) {
@@ -677,10 +625,8 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 .issuingOfficerId(transaction.getIssuingOfficerId())
                 .issuingOfficerName(officerName)
                 .status(transaction.getStatus().name())
-                .employeeSignature(transaction.getEmployeeSignature())
-                .officerSignature(transaction.getOfficerSignature())
-                .employeeSignedAt(transaction.getEmployeeSignedAt())
-                .officerSignedAt(transaction.getOfficerSignedAt())
+                .employeeSigned(transaction.getEmployeeSigned() != null ? transaction.getEmployeeSigned() : false)
+                .officerSigned(transaction.getOfficerSigned() != null ? transaction.getOfficerSigned() : false)
                 .createdAt(transaction.getCreatedAt())
                 .updatedAt(transaction.getUpdatedAt())
                 .issuedItems(issuedItemDtos)
