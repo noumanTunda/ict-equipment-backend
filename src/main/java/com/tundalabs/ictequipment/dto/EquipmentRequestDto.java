@@ -52,4 +52,10 @@ public class EquipmentRequestDto {
     @Size(max = 255, message = "Description must not exceed 255 characters")
     @Schema(description = "Equipment description", example = "Dell Latitude 5420")
     private String description;
+
+    @Schema(description = "Whether equipment has warranty", example = "true")
+    private Boolean hasWarranty;
+
+    @Schema(description = "Warranty duration in months (required if hasWarranty is true)", example = "24")
+    private Integer warrantyDurationMonths;
 }
