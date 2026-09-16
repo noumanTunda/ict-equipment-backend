@@ -43,6 +43,12 @@ public class EquipmentResponseDto {
     @Schema(description = "Equipment description", example = "Dell Latitude 5420")
     private String description;
 
+    @Schema(description = "Whether equipment has warranty", example = "true")
+    private Boolean hasWarranty;
+
+    @Schema(description = "Warranty duration in months", example = "24")
+    private Integer warrantyDurationMonths;
+
     @Schema(description = "Equipment creation timestamp")
     private LocalDateTime createdAt;
 
