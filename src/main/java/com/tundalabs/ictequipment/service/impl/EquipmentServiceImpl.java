@@ -212,4 +212,76 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .status(equipment.getStatus())
                 .build();
     }
+
+    @Override
+    @Transactional
+    public EquipmentResponseDto reinspectReturnedEquipment(Long equipmentId, EquipmentInspectionDto inspectionDto) {
+        log.info("Re-inspecting returned equipment with ID: {}", equipmentId);
+
+        Equipment equipment = equipmentRepository.findById(equipmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipment not found with ID: " + equipmentId));
+
+        // Validate equipment is in RETURNED state
+        if (equipment.getStatus() != Equipment.EquipmentStatus.RETURNED) {
+            throw new InvalidEquipmentStateException(
+                    "Equipment must be in RETURNED status for re-inspection. Current status: " + equipment.getStatus()
+            );
+        }
+
+        // Validate target status is either AVAILABLE or MAINTENANCE
+        if (inspectionDto.getTargetStatus() != Equipment.EquipmentStatus.AVAILABLE &&
+            inspectionDto.getTargetStatus() != Equipment.EquipmentStatus.MAINTENANCE) {
+            throw new InvalidEquipmentStateException(
+                    "Target status must be either AVAILABLE or MAINTENANCE. Provided: " + inspectionDto.getTargetStatus()
+            );
+        }
+
+        // Validate maintenance notes when target is MAINTENANCE
+        if (inspectionDto.getTargetStatus() == Equipment.EquipmentStatus.MAINTENANCE &&
+            (inspectionDto.getMaintenanceNotes() == null || inspectionDto.getMaintenanceNotes().trim().isEmpty())) {
+            throw new InvalidEquipmentStateException(
+                    "Maintenance notes are required when target status is MAINTENANCE"
+            );
+        }
+
+        // Update equipment status
+        equipment.setStatus(inspectionDto.getTargetStatus());
+        equipment = equipmentRepository.save(equipment);
+
+        log.info("Equipment {} re-inspected and transitioned to {}", equipment.getAssetNumber(), inspectionDto.getTargetStatus());
+
+        return mapToResponseDto(equipment);
+    }
+
+    @Override
+    public List<AssetStatusResponseDto> getStaffAssignedAssets() {
+        log.info("Fetching assigned assets for current user");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String employeeId = authentication.getName();
+
+        com.tundalabs.ictequipment.entity.User currentUser = userRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with employee ID: " + employeeId));
+
+        List<AssetStatusProjection> projections = equipmentRepository.findStaffAssignedAssetsWithStatus(currentUser.getId());
+
+        return projections.stream()
+                .map(this::mapToAssetStatusResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    private AssetStatusResponseDto mapToAssetStatusResponseDto(AssetStatusProjection projection) {
+        return AssetStatusResponseDto.builder()
+                .id(projection.getId())
+                .assetNumber(projection.getAssetNumber())
+                .serialNumber(projection.getSerialNumber())
+                .equipmentType(projection.getEquipmentType())
+                .status(projection.getStatus())
+                .issuedAt(projection.getIssuedAt())
+                .returnedAt(projection.getReturnedAt())
+                .transactionStatus(projection.getTransactionStatus())
+                .transactionCode(projection.getTransactionCode())
+                .staffId(projection.getStaffId())
+                .build();
+    }
 }
