@@ -1,6 +1,8 @@
 package com.tundalabs.ictequipment.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,6 +48,13 @@ public class Equipment {
     @Column(name = "supplier_details", length = 255)
     private String supplierDetails;
 
+    @Column(name = "has_warranty", nullable = false)
+    private Boolean hasWarranty;
+
+    @Column(name = "warranty_duration_months")
+    @Min(value = 0, message = "Warranty duration must be non-negative")
+    private Integer warrantyDurationMonths;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -77,5 +86,16 @@ public class Equipment {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    @AssertTrue(message = "Warranty duration must be specified when warranty is enabled, and must be null when warranty is disabled")
+    private boolean isWarrantyCoDependencyValid() {
+        if (hasWarranty == null) {
+            return false;
+        }
+        if (hasWarranty) {
+            return warrantyDurationMonths != null && warrantyDurationMonths >= 0;
+        }
+        return warrantyDurationMonths == null;
     }
 }
