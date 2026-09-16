@@ -1,11 +1,15 @@
 package com.tundalabs.ictequipment.service.impl;
 
+import com.tundalabs.ictequipment.dto.AssetStatusResponseDto;
+import com.tundalabs.ictequipment.dto.EquipmentInspectionDto;
 import com.tundalabs.ictequipment.dto.EquipmentRequestDto;
 import com.tundalabs.ictequipment.dto.EquipmentResponseDto;
 import com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto;
 import com.tundalabs.ictequipment.entity.Equipment;
 import com.tundalabs.ictequipment.entity.TransactionIssuedItem;
+import com.tundalabs.ictequipment.exception.InvalidEquipmentStateException;
 import com.tundalabs.ictequipment.exception.ResourceNotFoundException;
+import com.tundalabs.ictequipment.projection.AssetStatusProjection;
 import com.tundalabs.ictequipment.repository.EquipmentRepository;
 import com.tundalabs.ictequipment.repository.TransactionIssuedItemRepository;
 import com.tundalabs.ictequipment.repository.UserRepository;
@@ -53,6 +57,8 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .supplierDetails(request.getSupplierDetails())
                 .status(request.getStatus())
                 .description(request.getDescription())
+                .hasWarranty(request.getHasWarranty() != null ? request.getHasWarranty() : false)
+                .warrantyDurationMonths(request.getWarrantyDurationMonths())
                 .build();
 
         equipment = equipmentRepository.save(equipment);
@@ -119,6 +125,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         equipment.setSupplierDetails(request.getSupplierDetails());
         equipment.setStatus(request.getStatus());
         equipment.setDescription(request.getDescription());
+        equipment.setHasWarranty(request.getHasWarranty());
+        equipment.setWarrantyDurationMonths(request.getWarrantyDurationMonths());
 
         equipment = equipmentRepository.save(equipment);
         log.info("Equipment updated successfully with ID: {}", id);
@@ -153,6 +161,8 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .supplierDetails(equipment.getSupplierDetails())
                 .status(equipment.getStatus())
                 .description(equipment.getDescription())
+                .hasWarranty(equipment.getHasWarranty())
+                .warrantyDurationMonths(equipment.getWarrantyDurationMonths())
                 .createdAt(equipment.getCreatedAt())
                 .updatedAt(equipment.getUpdatedAt())
                 .build();
