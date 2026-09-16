@@ -417,7 +417,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
 
                 for (TransactionReturnedItem item : transaction.getReturnedItems()) {
                     returnedTable.addCell(new Cell(new Phrase(item.getEquipment().getAssetNumber(), normalFont)));
-                    returnedTable.addCell(new Cell(new Phrase(item.getItemCondition(), normalFont)));
+                    returnedTable.addCell(new Cell(new Phrase(item.getItemCondition().name(), normalFont)));
                     returnedTable.addCell(new Cell(new Phrase(item.getRemarks() != null ? item.getRemarks() : "N/A", normalFont)));
                 }
                 document.add(returnedTable);
@@ -594,7 +594,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                             .assetNumber(item.getEquipment().getAssetNumber())
                             .serialNumber(item.getEquipment().getSerialNumber())
                             .equipmentType(item.getEquipment().getEquipmentType())
-                            .itemCondition(item.getItemCondition())
+                            .itemCondition(item.getItemCondition().name())
                             .remarks(item.getRemarks())
                             .build())
                     .collect(Collectors.toList());
