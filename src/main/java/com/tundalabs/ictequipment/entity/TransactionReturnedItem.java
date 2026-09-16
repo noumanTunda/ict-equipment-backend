@@ -29,8 +29,9 @@ public class TransactionReturnedItem {
     @EqualsAndHashCode.Exclude
     private Equipment equipment;
 
-    @Column(name = "item_condition", nullable = false, length = 100)
-    private String itemCondition;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "item_condition", nullable = false, length = 20)
+    private ItemCondition itemCondition;
 
     @Column(name = "remarks", length = 500)
     private String remarks;
@@ -50,5 +51,12 @@ public class TransactionReturnedItem {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public enum ItemCondition {
+        GOOD,
+        FAIR,
+        DAMAGED,
+        OBSOLETE
     }
 }
