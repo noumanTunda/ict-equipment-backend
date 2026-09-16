@@ -210,7 +210,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 .orElseThrow(() -> new RuntimeException("Staff member not found"));
 
         if (staff.getKeyphrase() == null) {
-            throw new InvalidTransactionStateException("Staff member has not set a keyphrase. Please set a keyphrase first.");
+            throw new InvalidTransactionStateException("No keyphrase found for your Account. Please set a keyphrase first.");
         }
 
         // Validate the provided keyphrase against the stored hash
@@ -225,7 +225,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         log.info("Employee signed transaction ID: {} successfully", transactionId);
 
         // Check if both parties have signed - if so, complete the transaction
-        if (transaction.getEmployeeSigned() && transaction.getOfficerSigned()) {
+        if (Boolean.TRUE.equals(transaction.getEmployeeSigned()) && Boolean.TRUE.equals(transaction.getOfficerSigned())) {
             completeTransaction(transaction);
         }
 
@@ -275,7 +275,7 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
         log.info("Officer signed transaction ID: {} successfully", transactionId);
 
         // Check if both parties have signed - if so, complete the transaction
-        if (transaction.getEmployeeSigned() && transaction.getOfficerSigned()) {
+        if (Boolean.TRUE.equals(transaction.getEmployeeSigned()) && Boolean.TRUE.equals(transaction.getOfficerSigned())) {
             completeTransaction(transaction);
         }
 
