@@ -1,6 +1,7 @@
 package com.tundalabs.ictequipment.controller;
 
 import com.tundalabs.ictequipment.dto.ApiResponse;
+import com.tundalabs.ictequipment.dto.EquipmentInspectionDto;
 import com.tundalabs.ictequipment.dto.EquipmentRequestDto;
 import com.tundalabs.ictequipment.dto.EquipmentResponseDto;
 import com.tundalabs.ictequipment.service.EquipmentService;
@@ -167,5 +168,23 @@ public class EquipmentController {
         log.info("Fetching issued items for current user");
         java.util.List<EquipmentResponseDto> response = equipmentService.getMyIssuedItems();
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Issued items retrieved successfully", response));
+    }
+
+    @PostMapping("/{id}/reinspect")
+    @PreAuthorize("hasAnyAuthority('ROLE_ICT_OFFICER', 'ROLE_ADMIN')")
+    @Operation(summary = "Re-inspect returned equipment", description = "Re-inspects equipment in RETURNED status and transitions it to AVAILABLE or MAINTENANCE. Requires ICT_OFFICER or ADMIN role.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Equipment re-inspected successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid inspection data or equipment not in RETURNED status"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Equipment not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<EquipmentResponseDto>> reinspectReturnedEquipment(
+            @Parameter(description = "Equipment ID") @PathVariable Long id,
+            @Valid @RequestBody EquipmentInspectionDto inspectionDto) {
+        log.info("Re-inspecting equipment with ID: {}", id);
+        EquipmentResponseDto response = equipmentService.reinspectReturnedEquipment(id, inspectionDto);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Equipment re-inspected successfully", response));
     }
 }
