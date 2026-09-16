@@ -1,7 +1,6 @@
 package com.tundalabs.ictequipment.util;
 
 import com.lowagie.text.*;
-import com.lowagie.text.pdf.PdfWriter;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
