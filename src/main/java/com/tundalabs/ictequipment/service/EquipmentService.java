@@ -1,5 +1,7 @@
 package com.tundalabs.ictequipment.service;
 
+import com.tundalabs.ictequipment.dto.AssetStatusResponseDto;
+import com.tundalabs.ictequipment.dto.EquipmentInspectionDto;
 import com.tundalabs.ictequipment.dto.EquipmentRequestDto;
 import com.tundalabs.ictequipment.dto.EquipmentResponseDto;
 import com.tundalabs.ictequipment.dto.EquipmentSearchResponseDto;
@@ -27,4 +29,8 @@ public interface EquipmentService {
     List<EquipmentSearchResponseDto> searchEquipment(String status, String query);
 
     List<EquipmentResponseDto> getMyIssuedItems();
+
+    EquipmentResponseDto reinspectReturnedEquipment(Long equipmentId, EquipmentInspectionDto inspectionDto);
+
+    List<AssetStatusResponseDto> getStaffAssignedAssets();
 }
