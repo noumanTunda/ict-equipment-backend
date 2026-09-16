@@ -1,5 +1,6 @@
 package com.tundalabs.ictequipment.dto;
 
+import com.tundalabs.ictequipment.entity.TransactionReturnedItem;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -32,8 +33,8 @@ public class ApproveEquipmentRequestDto {
     @Schema(description = "Accessories provided with issued equipment")
     private String accessoriesProvided;
 
-    @Schema(description = "Condition of returned equipment", example = "Good working condition")
-    private String returnCondition;
+    @Schema(description = "Condition of returned equipment", example = "GOOD")
+    private TransactionReturnedItem.ItemCondition returnCondition;
 
     @Schema(description = "Remarks for returned equipment", example = "Minor scratches on lid")
     private String returnRemarks;

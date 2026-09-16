@@ -349,7 +349,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
             TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
                     .transaction(transaction)
                     .equipment(equipment)
-                    .itemCondition(approvalRequest.getReturnCondition())
+                    .itemCondition(approvalRequest.getReturnCondition() != null ? approvalRequest.getReturnCondition() : TransactionReturnedItem.ItemCondition.GOOD)
                     .remarks(approvalRequest.getReturnRemarks())
                     .build();
             returnedItemRepository.save(returnedItem);
@@ -369,7 +369,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
             TransactionReturnedItem returnedItem = TransactionReturnedItem.builder()
                     .transaction(transaction)
                     .equipment(returnEquipment)
-                    .itemCondition(approvalRequest.getReturnCondition())
+                    .itemCondition(approvalRequest.getReturnCondition() != null ? approvalRequest.getReturnCondition() : TransactionReturnedItem.ItemCondition.GOOD)
                     .remarks(approvalRequest.getReturnRemarks())
                     .build();
             returnedItemRepository.save(returnedItem);
