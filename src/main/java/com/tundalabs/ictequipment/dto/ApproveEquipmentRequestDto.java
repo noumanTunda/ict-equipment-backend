@@ -23,7 +23,7 @@ public class ApproveEquipmentRequestDto {
     @Schema(description = "Asset number of equipment to issue (for ISSUE or EXCHANGE approvals)", example = "AST-2024-001")
     private String issueAssetNumber;
 
-    @Schema(description = "Asset number of equipment to return (for RETURN or EXCHANGE approvals)", example = "AST-2023-001")
+    @Schema(description = "Asset number of equipment to return (for EXCHANGE approvals only - for RETURN requests, equipment is pre-selected)", example = "AST-2023-001")
     private String returnAssetNumber;
 
     @Valid
