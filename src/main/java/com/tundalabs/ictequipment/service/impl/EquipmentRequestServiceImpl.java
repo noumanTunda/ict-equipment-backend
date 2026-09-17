@@ -45,6 +45,14 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff member not found with ID: " + staffId));
 
+        // For RETURN or EXCHANGE requests, returnEquipmentId is mandatory
+        if (request.getRequestType() == EquipmentRequest.RequestType.RETURN || 
+            request.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) {
+            if (request.getReturnEquipmentId() == null) {
+                throw new RuntimeException("returnEquipmentId is required for " + request.getRequestType() + " requests");
+            }
+        }
+
         // Validate equipment exists if provided
         if (request.getReturnAssetNumber() != null) {
             Equipment returnEquipment = equipmentRepository.findByAssetNumber(request.getReturnAssetNumber())
