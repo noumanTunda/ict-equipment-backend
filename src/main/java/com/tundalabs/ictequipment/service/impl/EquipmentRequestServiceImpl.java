@@ -63,7 +63,7 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 request.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) {
                 if (returnEquipment.getStatus() != Equipment.EquipmentStatus.ISSUED) {
                     throw new EquipmentUnavailableException(
-                            "Equipment " + request.getReturnAssetNumber() + " is not in ISSUED to You. Current status: " + returnEquipment.getStatus()
+                            "Equipment " + returnEquipment.getAssetNumber() + " is not in ISSUED status. Current status: " + returnEquipment.getStatus()
                     );
                 }
             }
