@@ -87,14 +87,20 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
         // Generate unique request code
         String requestCode = generateRequestCode();
 
+        // Fetch return equipment if provided
+        Equipment returnEquipment = null;
+        if (request.getReturnEquipmentId() != null) {
+            returnEquipment = equipmentRepository.findById(request.getReturnEquipmentId())
+                    .orElseThrow(() -> new RuntimeException("Equipment not found with ID: " + request.getReturnEquipmentId()));
+        }
+
         // Create request
         EquipmentRequest equipmentRequest = EquipmentRequest.builder()
                 .requestCode(requestCode)
                 .staffId(staffId)
                 .requestType(request.getRequestType())
                 .reason(request.getReason())
-//                .returnAssetNumber(request.getReturnAssetNumber())
-//                .issueAssetNumber(request.getIssueAssetNumber())
+                .returnEquipment(returnEquipment)
                 .preferredEquipmentType(request.getPreferredEquipmentType())
                 .status(EquipmentRequest.RequestStatus.PENDING)
                 .build();
@@ -343,12 +349,11 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
             transaction.setIssuedItems(new ArrayList<>(List.of(issuedItem)));
 
         } else if (equipmentRequest.getRequestType() == EquipmentRequest.RequestType.RETURN) {
-            // Return equipment
-            if (returnAssetNum == null) {
-                throw new RuntimeException("Asset number must be specified for RETURN request");
+            // Return equipment - use the pre-selected equipment from the request
+            Equipment equipment = equipmentRequest.getReturnEquipment();
+            if (equipment == null) {
+                throw new RuntimeException("Return equipment not specified in the request");
             }
-            Equipment equipment = equipmentRepository.findByAssetNumber(returnAssetNum)
-                    .orElseThrow(() -> new RuntimeException("Equipment not found with asset number: " + returnAssetNum));
             
             // Update equipment status to RETURNED
             equipment.setStatus(Equipment.EquipmentStatus.RETURNED);
@@ -364,12 +369,11 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
             transaction.setReturnedItems(new HashSet<>(List.of(returnedItem)));
 
         } else if (equipmentRequest.getRequestType() == EquipmentRequest.RequestType.EXCHANGE) {
-            // Return old equipment
-            if (returnAssetNum == null) {
-                throw new RuntimeException("Return asset number must be specified for EXCHANGE request");
+            // Return old equipment - use the pre-selected equipment from the request
+            Equipment returnEquipment = equipmentRequest.getReturnEquipment();
+            if (returnEquipment == null) {
+                throw new RuntimeException("Return equipment not specified in the request");
             }
-            Equipment returnEquipment = equipmentRepository.findByAssetNumber(returnAssetNum)
-                    .orElseThrow(() -> new RuntimeException("Return equipment not found with asset number: " + returnAssetNum));
             
             returnEquipment.setStatus(Equipment.EquipmentStatus.RETURNED);
             equipmentRepository.save(returnEquipment);
@@ -448,6 +452,14 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
 
     private EquipmentRequestResponseDto mapToResponseDto(EquipmentRequest request, String staffName, 
             String approvedByName, Long transactionId) {
+        String returnAssetNumber = null;
+        Long returnEquipmentId = null;
+        
+        if (request.getReturnEquipment() != null) {
+            returnEquipmentId = request.getReturnEquipment().getId();
+            returnAssetNumber = request.getReturnEquipment().getAssetNumber();
+        }
+        
         return EquipmentRequestResponseDto.builder()
                 .id(request.getId())
                 .requestCode(request.getRequestCode())
@@ -458,6 +470,8 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
                 .status(request.getStatus())
                 .rejectionReason(request.getRejectionReason())
                 .preferredEquipmentType(request.getPreferredEquipmentType())
+                .returnEquipmentId(returnEquipmentId)
+                .returnAssetNumber(returnAssetNumber)
                 .approvedBy(request.getApprovedBy())
                 .approvedByName(approvedByName)
                 .approvedAt(request.getApprovedAt())
