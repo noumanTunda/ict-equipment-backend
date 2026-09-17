@@ -24,8 +24,8 @@ public class CreateEquipmentRequestDto {
     @Schema(description = "Reason for the request", example = "Need to replace old laptop with new one")
     private String reason;
 
-    @Schema(description = "Asset number of equipment to return (for RETURN or EXCHANGE requests)", example = "AST-2023-001")
-    private String returnAssetNumber;
+    @Schema(description = "ID of equipment to return (for RETURN or EXCHANGE requests)", example = "1")
+    private Long returnEquipmentId;
 
     @Schema(description = "Asset number of equipment to issue (for ISSUE or EXCHANGE requests)", example = "AST-2024-001")
     private String issueAssetNumber;
