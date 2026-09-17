@@ -42,6 +42,10 @@ public class EquipmentRequest {
     @Column(name = "preferred_equipment_type", length = 100)
     private String preferredEquipmentType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "return_equipment_id")
+    private Equipment returnEquipment;
+
     @Column(name = "status", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private RequestStatus status;
