@@ -54,9 +54,9 @@ public class EquipmentRequestServiceImpl implements EquipmentRequestService {
         }
 
         // Validate equipment exists if provided
-        if (request.getReturnAssetNumber() != null) {
-            Equipment returnEquipment = equipmentRepository.findByAssetNumber(request.getReturnAssetNumber())
-                    .orElseThrow(() -> new RuntimeException("Equipment not found with asset number: " + request.getReturnAssetNumber()));
+        if (request.getReturnEquipmentId() != null) {
+            Equipment returnEquipment = equipmentRepository.findById(request.getReturnEquipmentId())
+                    .orElseThrow(() -> new RuntimeException("Equipment not found with ID: " + request.getReturnEquipmentId()));
             
             // For RETURN or EXCHANGE, validate equipment is ISSUED to this staff
             if (request.getRequestType() == EquipmentRequest.RequestType.RETURN || 
