@@ -1,6 +1,9 @@
 package com.tundalabs.ictequipment.service.impl;
 
 import com.lowagie.text.*;
+import com.lowagie.text.Font;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.tundalabs.ictequipment.dto.*;
 import com.tundalabs.ictequipment.entity.*;
@@ -16,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -359,133 +363,202 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
                 .orElseThrow(() -> new RuntimeException("Issuing officer not found"));
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4);
-            PdfWriter.getInstance(document, outputStream);
+            // Expanded Top/Bottom margins (50pt) to accommodate header & footer rules
+            Document document = new Document(PageSize.A4, 36, 36, 50, 50);
+            PdfWriter writer = PdfWriter.getInstance(document, outputStream);
+
+            // Attach Header/Footer Event Listener
+            writer.setPageEvent(new PdfHeaderFooterEvent());
+
             document.open();
 
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
-            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-            Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+            // Color Palette
+            Color primaryColor = new Color(19, 148, 219);     // #1394db
+            Color darkSlate = new Color(30, 41, 59);          // #1e293b
+            Color lightBg = new Color(248, 250, 252);         // #f8fafc
+            Color borderGray = new Color(226, 232, 240);      // #e2e8f0
+            Color headerBg = new Color(241, 245, 249);        // #f1f5f9
+            Color greenStatus = new Color(16, 185, 129);      // Green
 
-            document.add(new Paragraph("PPRA ICT EQUIPMENT ISSUE AND RETURN FORM", titleFont));
-            document.add(Chunk.NEWLINE);
+            // Typography
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, primaryColor);
+            Font subTitleFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
+            Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, primaryColor);
+            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, darkSlate);
+            Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 8, darkSlate);
+            Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, darkSlate);
+            Font signedFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, greenStatus);
 
-            document.add(new Paragraph("PART A - TRANSACTION DETAILS", headerFont));
-            document.add(new Paragraph("Transaction Code: " + transaction.getTransactionCode(), normalFont));
-            document.add(new Paragraph("Date: " + transaction.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), normalFont));
-            document.add(new Paragraph("Status: " + transaction.getStatus(), normalFont));
-            document.add(Chunk.NEWLINE);
+            // --- HEADER BANNER ---
+            PdfPTable headerTable = new PdfPTable(1);
+            headerTable.setWidthPercentage(100);
+            PdfPCell headerCell = new PdfPCell();
+            headerCell.setPadding(10);
+            headerCell.setBackgroundColor(lightBg);
+            headerCell.setBorderColor(borderGray);
+            headerCell.setBorderWidth(1f);
 
-            document.add(new Paragraph("PART B - STAFF INFORMATION", headerFont));
-            document.add(new Paragraph("Staff ID: " + transaction.getStaffId(), normalFont));
-            document.add(new Paragraph("Staff Name: " + staff.getFullName(), normalFont));
-            document.add(new Paragraph("Department: " + staff.getDepartment(), normalFont));
-            document.add(new Paragraph("Email: " + staff.getEmail(), normalFont));
-            document.add(Chunk.NEWLINE);
+            Paragraph pTitle = new Paragraph("EQUIPMENT ISSUE AND RETURN FORM", titleFont);
+            pTitle.setAlignment(Element.ALIGN_CENTER);
+            headerCell.addElement(pTitle);
 
-            document.add(new Paragraph("PART C - ISSUING OFFICER INFORMATION", headerFont));
-            document.add(new Paragraph("Officer ID: " + transaction.getIssuingOfficerId(), normalFont));
-            document.add(new Paragraph("Officer Name: " + officer.getFullName(), normalFont));
-            document.add(Chunk.NEWLINE);
+            Paragraph pSub = new Paragraph("ICT EQUIPMENT MANAGEMENT SYSTEM", subTitleFont);
+            pSub.setAlignment(Element.ALIGN_CENTER);
+            headerCell.addElement(pSub);
 
-            document.add(new Paragraph("PART D - ISSUED ITEMS", headerFont));
+            headerTable.addCell(headerCell);
+            document.add(headerTable);
+
+            // Helper Lambda for Section Headers
+            java.util.function.Consumer<String> addSectionHeader = (title) -> {
+                try {
+                    PdfPTable secTable = new PdfPTable(1);
+                    secTable.setWidthPercentage(100);
+                    secTable.setSpacingBefore(8f);
+                    secTable.setSpacingAfter(4f);
+                    PdfPCell cell = new PdfPCell(new Phrase(title, sectionFont));
+                    cell.setBackgroundColor(headerBg);
+                    cell.setBorderColor(borderGray);
+                    cell.setPadding(5f);
+                    secTable.addCell(cell);
+                    document.add(secTable);
+                } catch (Exception e) {
+                    log.error("Failed to render section header", e);
+                }
+            };
+
+            // --- PART A: TRANSACTION DETAILS ---
+            addSectionHeader.accept("PART A - TRANSACTION DETAILS");
+
+            PdfPTable partA = new PdfPTable(6);
+            partA.setWidthPercentage(100);
+            partA.setWidths(new float[]{1.8f, 3.2f, 0.6f, 1.6f, 0.8f, 2.2f});
+
+            addKeyValuePair(partA, "Transaction Code:", transaction.getTransactionCode(), boldFont, normalFont, borderGray);
+            addKeyValuePair(partA, "Date:", transaction.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), boldFont, normalFont, borderGray);
+            addKeyValuePair(partA, "Status:", transaction.getStatus().toString(), boldFont, normalFont, borderGray);
+
+            document.add(partA);
+
+            // --- PART B & C: PERSONNEL INFORMATION ---
+            addSectionHeader.accept("PART B & C - PERSONNEL INFORMATION");
+            PdfPTable partyTable = new PdfPTable(2);
+            partyTable.setWidthPercentage(100);
+            partyTable.setWidths(new float[]{1f, 1f});
+
+            PdfPCell staffCell = new PdfPCell();
+            staffCell.setPadding(6f);
+            staffCell.setBorderColor(borderGray);
+            staffCell.addElement(new Paragraph("STAFF DETAILS", boldFont));
+            staffCell.addElement(new Paragraph("Name: " + staff.getFullName(), normalFont));
+            staffCell.addElement(new Paragraph("Department: " + (staff.getDepartment() != null ? staff.getDepartment() : "N/A"), normalFont));
+            staffCell.addElement(new Paragraph("Email: " + staff.getEmail(), normalFont));
+            partyTable.addCell(staffCell);
+
+            PdfPCell officerCell = new PdfPCell();
+            officerCell.setPadding(6f);
+            officerCell.setBorderColor(borderGray);
+            officerCell.addElement(new Paragraph("ISSUING OFFICER DETAILS", boldFont));
+            officerCell.addElement(new Paragraph("Name: " + officer.getFullName(), normalFont));
+            officerCell.addElement(new Paragraph("Department: " + (officer.getDepartment() != null ? officer.getDepartment() : "N/A"), normalFont));
+            officerCell.addElement(new Paragraph("Email: " + officer.getEmail(), normalFont));
+            partyTable.addCell(officerCell);
+
+            document.add(partyTable);
+
+            // --- PART D: ISSUED ITEMS ---
+            addSectionHeader.accept("PART D - ISSUED ITEMS");
             if (transaction.getIssuedItems() != null && !transaction.getIssuedItems().isEmpty()) {
-                Table issuedTable = new Table(3);
-                issuedTable.setWidths(new float[]{3f, 3f, 4f});
-                issuedTable.addCell(new Cell(new Phrase("Asset Number", headerFont)));
-                issuedTable.addCell(new Cell(new Phrase("Serial Number", headerFont)));
-                issuedTable.addCell(new Cell(new Phrase("Accessories", headerFont)));
+                PdfPTable issuedTable = new PdfPTable(4);
+                issuedTable.setWidthPercentage(100);
+                issuedTable.setWidths(new float[]{1.4f, 1.4f, 4f, 4f});
+
+                addTableHeader(issuedTable, "Asset Number", headerFont, headerBg, borderGray);
+                addTableHeader(issuedTable, "Serial Number", headerFont, headerBg, borderGray);
+                addTableHeader(issuedTable, "Equipment Name", headerFont, headerBg, borderGray);
+                addTableHeader(issuedTable, "Accessories Provided", headerFont, headerBg, borderGray);
 
                 for (TransactionIssuedItem item : transaction.getIssuedItems()) {
-                    issuedTable.addCell(new Cell(new Phrase(item.getEquipment().getAssetNumber(), normalFont)));
-                    issuedTable.addCell(new Cell(new Phrase(item.getEquipment().getSerialNumber(), normalFont)));
-                    issuedTable.addCell(new Cell(new Phrase(item.getAccessoriesProvided() != null ? item.getAccessoriesProvided() : "N/A", normalFont)));
+                    addTableCell(issuedTable, item.getEquipment().getAssetNumber(), normalFont, borderGray);
+                    addTableCell(issuedTable, item.getEquipment().getSerialNumber(), normalFont, borderGray);
+                    addTableCell(issuedTable, item.getEquipment().getBrandModel(), normalFont, borderGray);
+                    addTableCell(issuedTable, item.getAccessoriesProvided() != null ? item.getAccessoriesProvided() : "N/A", normalFont, borderGray);
                 }
                 document.add(issuedTable);
             } else {
-                document.add(new Paragraph("No issued items", normalFont));
+                document.add(new Paragraph("No items issued in this transaction.", normalFont));
             }
-            document.add(Chunk.NEWLINE);
 
-            document.add(new Paragraph("PART E - RETURNED ITEMS", headerFont));
+            // --- PART E: RETURNED ITEMS ---
+            addSectionHeader.accept("PART E - RETURNED ITEMS");
             if (transaction.getReturnedItems() != null && !transaction.getReturnedItems().isEmpty()) {
-                Table returnedTable = new Table(3);
-                returnedTable.setWidths(new float[]{3f, 3f, 4f});
-                returnedTable.addCell(new Cell(new Phrase("Asset Number", headerFont)));
-                returnedTable.addCell(new Cell(new Phrase("Condition", headerFont)));
-                returnedTable.addCell(new Cell(new Phrase("Remarks", headerFont)));
+                PdfPTable returnedTable = new PdfPTable(4);
+                returnedTable.setWidthPercentage(100);
+                returnedTable.setWidths(new float[]{1.4f, 3f, 2f, 4f});
+
+                addTableHeader(returnedTable, "Asset Number", headerFont, headerBg, borderGray);
+                addTableHeader(returnedTable, "Equipment Name", headerFont, headerBg, borderGray);
+                addTableHeader(returnedTable, "Condition", headerFont, headerBg, borderGray);
+                addTableHeader(returnedTable, "Remarks", headerFont, headerBg, borderGray);
 
                 for (TransactionReturnedItem item : transaction.getReturnedItems()) {
-                    returnedTable.addCell(new Cell(new Phrase(item.getEquipment().getAssetNumber(), normalFont)));
-                    returnedTable.addCell(new Cell(new Phrase(item.getItemCondition().name(), normalFont)));
-                    returnedTable.addCell(new Cell(new Phrase(item.getRemarks() != null ? item.getRemarks() : "N/A", normalFont)));
+                    addTableCell(returnedTable, item.getEquipment().getAssetNumber(), normalFont, borderGray);
+                    addTableCell(returnedTable, item.getEquipment().getBrandModel(), normalFont, borderGray);
+                    addTableCell(returnedTable, item.getItemCondition().name(), normalFont, borderGray);
+                    addTableCell(returnedTable, item.getRemarks() != null ? item.getRemarks() : "N/A", normalFont, borderGray);
                 }
                 document.add(returnedTable);
             } else {
-                document.add(new Paragraph("No returned items", normalFont));
+                document.add(new Paragraph("No items returned in this transaction.", normalFont));
             }
-            document.add(Chunk.NEWLINE);
 
-            document.add(new Paragraph("PART F - ICT CHECKLIST", headerFont));
+            // --- PART F: ICT CHECKLIST ---
+            addSectionHeader.accept("PART F - MANDATORY ICT CHECKLIST");
             if (transaction.getChecklist() != null) {
-                IctChecklist checklist = transaction.getChecklist();
-                document.add(new Paragraph("OS Installed: " + (checklist.getOsInstalled() != null ? checklist.getOsInstalled() : "N/A"), normalFont));
-                document.add(new Paragraph("App/System Installed: " + (checklist.getAppSystemInstalled() != null ? checklist.getAppSystemInstalled() : "N/A"), normalFont));
-                document.add(new Paragraph("Anti-virus Installed: " + (checklist.getAntiVirusInstalled() != null ? checklist.getAntiVirusInstalled() : "N/A"), normalFont));
-                document.add(new Paragraph("PDF Reader Installed: " + (checklist.getPdfReaderInstalled() != null ? checklist.getPdfReaderInstalled() : "N/A"), normalFont));
-                document.add(new Paragraph("Joined to Domain: " + (checklist.getIsJoinedToDomain() != null ? checklist.getIsJoinedToDomain() : "N/A"), normalFont));
-                document.add(new Paragraph("VPN Installed: " + (checklist.getIsInstalledVpn() != null ? checklist.getIsInstalledVpn() : "N/A"), normalFont));
-                document.add(new Paragraph("Printer Installed: " + (checklist.getIsInstalledPrinter() != null ? checklist.getIsInstalledPrinter() : "N/A"), normalFont));
-                document.add(new Paragraph("Additional Notes: " + (checklist.getAdditionalNotes() != null ? checklist.getAdditionalNotes() : "N/A"), normalFont));
+                IctChecklist chk = transaction.getChecklist();
+                PdfPTable chkTable = new PdfPTable(4);
+                chkTable.setWidthPercentage(100);
+                chkTable.setWidths(new float[]{1.4f, 3f, 1.4f, 3f});
+
+                addKeyValuePair(chkTable, "OS Installed:", chk.getOsInstalled() != null ? chk.getOsInstalled() : "N/A", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "Apps Installed:", chk.getAppSystemInstalled() != null ? chk.getAppSystemInstalled() : "N/A", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "Antivirus:", chk.getAntiVirusInstalled() != null ? chk.getAntiVirusInstalled() : "N/A", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "PDF Reader:", chk.getPdfReaderInstalled() != null ? chk.getPdfReaderInstalled() : "N/A", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "Joined Domain:", Boolean.TRUE.equals(chk.getIsJoinedToDomain()) ? "Yes" : "No", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "VPN Configured:", Boolean.TRUE.equals(chk.getIsInstalledVpn()) ? "Yes" : "No", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "Printer Configured:", Boolean.TRUE.equals(chk.getIsInstalledPrinter()) ? "Yes" : "No", boldFont, normalFont, borderGray);
+                addKeyValuePair(chkTable, "Additional Notes:", chk.getAdditionalNotes() != null ? chk.getAdditionalNotes() : "N/A", boldFont, normalFont, borderGray);
+
+                document.add(chkTable);
             } else {
-                document.add(new Paragraph("No checklist provided", normalFont));
+                document.add(new Paragraph("Checklist not required or not recorded.", normalFont));
             }
-            document.add(Chunk.NEWLINE);
 
-            document.add(new Paragraph("PART G - SIGNATURES", headerFont));
+            // --- PART G: DIGITAL SIGNATURES ---
+            addSectionHeader.accept("PART G - DIGITAL SIGNATURE ACKNOWLEDGEMENT");
+            PdfPTable sigTable = new PdfPTable(2);
+            sigTable.setWidthPercentage(100);
+            sigTable.setWidths(new float[]{1f, 1f});
 
-            // Create 2-column table for signatures
-            Table signatureTable = new Table(2);
-            signatureTable.setWidths(new float[]{3f, 2f});
-            signatureTable.setWidth(100f);
+            boolean staffIsSigned = Boolean.TRUE.equals(transaction.getEmployeeSigned());
+            PdfPCell staffSigCell = new PdfPCell();
+            staffSigCell.setPadding(8f);
+            staffSigCell.setBorderColor(borderGray);
+            staffSigCell.addElement(new Paragraph("Staff Member Verification", boldFont));
+            staffSigCell.addElement(new Paragraph("Name: " + staff.getFullName(), normalFont));
+            staffSigCell.addElement(new Paragraph("Status: " + (staffIsSigned ? "SIGNED (Keyphrase Verified)" : "Pending Signature"), staffIsSigned ? signedFont : normalFont));
+            sigTable.addCell(staffSigCell);
 
-            // Employee Signature Row
-            Cell employeeMetadataCell = new Cell();
-            employeeMetadataCell.setBorder(Rectangle.NO_BORDER);
-            employeeMetadataCell.add(new Phrase("Staff Signature:", headerFont));
-            employeeMetadataCell.add(Chunk.NEWLINE);
-            employeeMetadataCell.add(new Phrase("Name: " + staff.getFullName(), normalFont));
-            employeeMetadataCell.add(Chunk.NEWLINE);
-            String employeeSignedStatus = transaction.getEmployeeSigned() != null && transaction.getEmployeeSigned()
-                ? "Signed with keyphrase"
-                : "Not signed";
-            employeeMetadataCell.add(new Phrase("Status: " + employeeSignedStatus, normalFont));
-            signatureTable.addCell(employeeMetadataCell);
+            boolean officerIsSigned = Boolean.TRUE.equals(transaction.getOfficerSigned());
+            PdfPCell officerSigCell = new PdfPCell();
+            officerSigCell.setPadding(8f);
+            officerSigCell.setBorderColor(borderGray);
+            officerSigCell.addElement(new Paragraph("Issuing Officer Verification", boldFont));
+            officerSigCell.addElement(new Paragraph("Name: " + officer.getFullName(), normalFont));
+            officerSigCell.addElement(new Paragraph("Status: " + (officerIsSigned ? "SIGNED (Keyphrase Verified)" : "Pending Signature"), officerIsSigned ? signedFont : normalFont));
+            sigTable.addCell(officerSigCell);
 
-            Cell employeeSignatureCell = new Cell();
-            employeeSignatureCell.setBorder(Rectangle.NO_BORDER);
-            employeeSignatureCell.add(new Phrase(transaction.getEmployeeSigned() != null && transaction.getEmployeeSigned() ? "[ Signed ]" : "[ Not Signed ]", normalFont));
-            signatureTable.addCell(employeeSignatureCell);
-
-            // Officer Signature Row
-            Cell officerMetadataCell = new Cell();
-            officerMetadataCell.setBorder(Rectangle.NO_BORDER);
-            officerMetadataCell.add(new Phrase("Officer Signature:", headerFont));
-            officerMetadataCell.add(Chunk.NEWLINE);
-            officerMetadataCell.add(new Phrase("Name: " + officer.getFullName(), normalFont));
-            officerMetadataCell.add(Chunk.NEWLINE);
-            String officerSignedStatus = transaction.getOfficerSigned() != null && transaction.getOfficerSigned()
-                ? "Signed with keyphrase"
-                : "Not signed";
-            officerMetadataCell.add(new Phrase("Status: " + officerSignedStatus, normalFont));
-            signatureTable.addCell(officerMetadataCell);
-
-            Cell officerSignatureCell = new Cell();
-            officerSignatureCell.setBorder(Rectangle.NO_BORDER);
-            officerSignatureCell.add(new Phrase(transaction.getOfficerSigned() != null && transaction.getOfficerSigned() ? "[ Signed ]" : "[ Not Signed ]", normalFont));
-            signatureTable.addCell(officerSignatureCell);
-
-            document.add(signatureTable);
+            document.add(sigTable);
 
             document.close();
             return outputStream.toByteArray();
@@ -493,6 +566,36 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
             log.error("Error generating PDF for transaction ID: {}", transactionId, e);
             throw new RuntimeException("Failed to generate PDF: " + e.getMessage(), e);
         }
+    }
+
+// --- HELPER METHODS FOR CLEAN TABLE BUILDING ---
+
+    private void addTableHeader(PdfPTable table, String text, Font font, Color bgColor, Color borderColor) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBackgroundColor(bgColor);
+        cell.setBorderColor(borderColor);
+        cell.setPadding(5f);
+        table.addCell(cell);
+    }
+
+    private void addTableCell(PdfPTable table, String text, Font font, Color borderColor) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBorderColor(borderColor);
+        cell.setPadding(5f);
+        table.addCell(cell);
+    }
+
+    private void addKeyValuePair(PdfPTable table, String key, String value, Font keyFont, Font valueFont, Color borderColor) {
+        PdfPCell keyCell = new PdfPCell(new Phrase(key, keyFont));
+        keyCell.setBorderColor(borderColor);
+        keyCell.setPadding(4f);
+        keyCell.setBackgroundColor(new Color(250, 250, 250));
+        table.addCell(keyCell);
+
+        PdfPCell valCell = new PdfPCell(new Phrase(value, valueFont));
+        valCell.setBorderColor(borderColor);
+        valCell.setPadding(4f);
+        table.addCell(valCell);
     }
 
     private List<TransactionIssuedItem> processIssuedItems(List<IssuedItemRequestDto> issuedItemDtos, EquipmentTransaction transaction) {
@@ -561,8 +664,6 @@ public class EquipmentTransactionServiceImpl implements EquipmentTransactionServ
     }
 
     private void rollbackEquipmentStatuses(EquipmentTransaction transaction) {
-        // No rollback needed since equipment statuses are only updated on signature submission
-        // If transaction is cancelled before signatures, equipment statuses remain unchanged
         log.info("No equipment status rollback needed for transaction {}", transaction.getTransactionCode());
     }
 
