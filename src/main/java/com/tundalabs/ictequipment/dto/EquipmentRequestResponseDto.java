@@ -49,6 +49,12 @@ public class EquipmentRequestResponseDto {
     @Schema(description = "Preferred equipment type (for ISSUE or EXCHANGE requests)", example = "LAPTOP")
     private String preferredEquipmentType;
 
+    @Schema(description = "ID of equipment to return (for RETURN or EXCHANGE requests)", example = "1")
+    private Long returnEquipmentId;
+
+    @Schema(description = "Asset number of equipment to return (for RETURN or EXCHANGE requests)", example = "AST-2023-001")
+    private String returnAssetNumber;
+
     @Schema(description = "Approval timestamp")
     private LocalDateTime approvedAt;
 
