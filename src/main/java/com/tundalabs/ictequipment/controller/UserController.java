@@ -80,6 +80,19 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Keyphrase updated successfully", null));
     }
 
+    @GetMapping("/keyphrase/status")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Check keyphrase status", description = "Returns true if the authenticated user has a keyphrase configured.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Keyphrase status retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<Boolean>> hasKeyphrase(Authentication authentication) {
+        Long userId = getAuthenticatedUserId(authentication);
+        boolean exists = userService.hasKeyphrase(userId);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Keyphrase status retrieved", exists));
+    }
+
     private Long getAuthenticatedUserId(Authentication authentication) {
         Object principal = authentication.getPrincipal();
         
