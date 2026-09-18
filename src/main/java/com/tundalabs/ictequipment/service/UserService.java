@@ -13,4 +13,6 @@ public interface UserService {
     void setKeyphrase(Long userId, SetKeyphraseRequestDto request);
 
     void updateKeyphrase(Long userId, UpdateKeyphraseRequestDto request);
+
+    boolean hasKeyphrase(Long userId);
 }
