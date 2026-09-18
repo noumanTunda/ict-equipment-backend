@@ -91,4 +91,12 @@ public class UserServiceImpl implements UserService {
 
         log.info("Keyphrase updated successfully for user ID: {}", userId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasKeyphrase(Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> user.getKeyphrase() != null && !user.getKeyphrase().isBlank())
+                .orElse(false);
+    }
 }
